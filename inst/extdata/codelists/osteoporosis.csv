@@ -1,0 +1,4 @@
+"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
+"osteoporosis","Osteoporosis","Musculoskeletal","ATC","M05B",FALSE,2,365,"dgt_medication.R line 203"
+"osteoporosis","Osteoporosis","Musculoskeletal","ATC","G03XC01",FALSE,2,365,"dgt_medication.R line 203"
+"osteoporosis","Osteoporosis","Musculoskeletal","ATC","H05AA",FALSE,2,365,"dgt_medication.R line 203"

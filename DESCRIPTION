@@ -1,0 +1,33 @@
+Package: regmorbidity
+Type: Package
+Title: Extracting Comorbidity from Danish Register Data with Editable Code Lists
+Version: 0.1.0
+Authors@R: c(
+    person("Jie", "Zhang", role = "aut"),
+    person("Sara", "Schwartz", email = "saras@clin.au.dk", role = c("aut", "cre")))
+Description: A general approach to deriving comorbidity indicators from Danish
+    register data. Conditions are defined in plain CSV code lists that users
+    edit, extend and version themselves - one file per condition if preferred -
+    rather than in code. Medication (ATC) conditions require a configurable
+    number of dispensings within a configurable time window, and the onset date
+    is the date of the qualifying dispensing. Conditions are extracted one at a
+    time and checkpointed to disk, so a long run over the full register resumes
+    after an interruption instead of starting over. The code lists distributed
+    with the package take their starting point in those used by Prior and
+    colleagues (2016) <doi:10.1093/aje/kwv324>; the extraction method here is
+    not an implementation of that index and users are expected to revise the
+    code lists for their own study.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1)
+Imports:
+    dplyr (>= 1.1.0),
+    data.table (>= 1.14.0),
+    rlang (>= 1.0.0),
+    tools,
+    utils
+Suggests:
+    arrow,
+    duckplyr
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3

@@ -1,0 +1,4 @@
+"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
+"thyroid","Thyroid disorder","Endocrine","ATC","H03A","FALSE","2","365","Thyroid preparations; expanded from H03, dgt_medication.R line 130"
+"thyroid","Thyroid disorder","Endocrine","ATC","H03B","FALSE","2","365","Antithyroid preparations; expanded from H03, dgt_medication.R line 130"
+"thyroid","Thyroid disorder","Endocrine","ATC","H03C","FALSE","2","365","Iodine therapy; expanded from H03, dgt_medication.R line 130"

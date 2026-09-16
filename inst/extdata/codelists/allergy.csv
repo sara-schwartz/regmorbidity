@@ -1,0 +1,6 @@
+"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
+"allergy","Allergy","Pulmonary","ATC","R06AX",FALSE,2,365,"dgt_medication.R line 163"
+"allergy","Allergy","Pulmonary","ATC","R06AE07",FALSE,2,365,"dgt_medication.R line 163"
+"allergy","Allergy","Pulmonary","ATC","R06AE09",FALSE,2,365,"dgt_medication.R line 163"
+"allergy","Allergy","Pulmonary","ATC","R01AC",FALSE,2,365,"dgt_medication.R line 163"
+"allergy","Allergy","Pulmonary","ATC","R01AD",FALSE,2,365,"dgt_medication.R line 163"

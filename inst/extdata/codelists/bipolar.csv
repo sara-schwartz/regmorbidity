@@ -1,0 +1,2 @@
+"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
+"bipolar","Bipolar affective disorder","Mental","ATC","N05AN",FALSE,2,365,"dgt_medication.R line 291"

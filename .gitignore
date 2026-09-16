@@ -1,0 +1,24 @@
+# Local scratch, never committed. Has its own self-ignoring .gitignore too.
+_ignore/
+
+# Project instructions for Claude Code: read from the working directory,
+# not meant to be published. See _ignore/README.txt.
+CLAUDE.md
+
+# Internal working docs, not ready to publish yet
+CODELIST_REVIEW.md
+DECISIONS.md
+METHODS.md
+TODO.txt
+ASSUMPTIONS_AND_LIMITATIONS.txt
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rcheck/
+*.tar.gz
+
+# macOS
+.DS_Store

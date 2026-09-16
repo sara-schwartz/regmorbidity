@@ -1,0 +1,3 @@
+"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
+"diabetes","Diabetes mellitus","Endocrine","ATC","A10A",FALSE,2,365,"dgt_medication.R line 111"
+"diabetes","Diabetes mellitus","Endocrine","ATC","A10B",FALSE,2,365,"dgt_medication.R line 111"

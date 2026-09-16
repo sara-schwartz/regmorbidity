@@ -1,0 +1,2 @@
+"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
+"epilepsy","Epilepsy","Neurological","ATC","N03A","FALSE","2","365","Antiepileptics; expanded from N03, dgt_medication.R line 256"
