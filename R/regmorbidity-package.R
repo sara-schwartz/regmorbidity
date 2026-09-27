@@ -66,12 +66,16 @@
 #'   \item{[mb_load_conditions()]}{read the per-condition files back}
 #'   \item{[mb_to_wide()]}{one column per condition}
 #'   \item{[mb_count_conditions()]}{`n_conditions` and `multimorbid`}
+#'   \item{[mb_prevalence()]}{condition status at a point in time, with a
+#'     lookback window, rather than ever-after-onset}
 #' }
 #'
 #' @section Authors:
 #' Jie Zhang and Sara Schwartz (saras@@clin.au.dk).
 #'
 #' @importFrom rlang .data
+#' @importFrom rlang :=
 #' @importFrom data.table .N
+#' @importFrom dplyr %>%
 #' @keywords internal
 "_PACKAGE"

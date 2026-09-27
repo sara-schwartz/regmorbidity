@@ -12,7 +12,8 @@ mb_flag_users_impl(
   id_col,
   date_col,
   dedupe_same_day,
-  keep_all
+  keep_all,
+  latest = FALSE
 )
 }
 \description{

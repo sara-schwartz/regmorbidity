@@ -93,7 +93,7 @@ mb_load_conditions <- function(dir, conditions = NULL) {
 #' @return A wide data frame: one row per person, one column per condition.
 #'   `NA` means the person never met that condition's criteria.
 #' @export
-mb_to_wide <- function(long, id_col = "PNR", value = "onset_date") {
+mb_to_wide <- function(long, id_col = "pnr", value = "onset_date") {
 
   stopifnot(is.data.frame(long))
   for (nm in c(id_col, "condition", value)) {
@@ -148,19 +148,30 @@ mb_to_wide <- function(long, id_col = "PNR", value = "onset_date") {
 #' into spells that can close again. That is a different estimand, not an
 #' approximation of this one.
 #' @export
-mb_count_conditions <- function(wide, id_col = "PNR", as_of = NULL) {
+mb_count_conditions <- function(wide, id_col = "pnr", as_of = NULL) {
 
   # Recomputing over an already-counted table would otherwise treat
   # n_conditions as a condition.
   condition_cols <- setdiff(names(wide),
                             c(id_col, "n_conditions", "multimorbid"))
-  onset_dates <- as.matrix(wide[, condition_cols, drop = FALSE])
+
+  # as.matrix() on a data frame of Date columns silently formats them to
+  # date STRINGS, not the numeric day count `as_of` is compared against below
+  # - so every as_of comparison was a string against a number and effectively
+  # always false. Converting column by column keeps the numeric day count
+  # instead. vapply() drops the matrix dimension when wide has exactly one
+  # row, so that case is reshaped back explicitly.
+  onset_dates <- vapply(wide[, condition_cols, drop = FALSE],
+                        function(x) as.numeric(as.Date(x)),
+                        numeric(nrow(wide)))
+  if (is.null(dim(onset_dates))) {
+    onset_dates <- matrix(onset_dates, nrow = nrow(wide),
+                          dimnames = list(NULL, condition_cols))
+  }
 
   has_condition <- if (is.null(as_of)) {
     !is.na(onset_dates)
   } else {
-    # as.matrix() drops the Date class, so compare on the numeric day count
-    # both sides rather than relying on Date arithmetic here.
     !is.na(onset_dates) & onset_dates <= as.numeric(as.Date(as_of))
   }
 

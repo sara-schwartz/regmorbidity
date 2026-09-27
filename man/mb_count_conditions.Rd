@@ -4,7 +4,7 @@
 \alias{mb_count_conditions}
 \title{Count how many of the conditions each person has}
 \usage{
-mb_count_conditions(wide, id_col = "PNR", as_of = NULL)
+mb_count_conditions(wide, id_col = "pnr", as_of = NULL)
 }
 \arguments{
 \item{wide}{Output of \code{\link[=mb_to_wide]{mb_to_wide()}}.}

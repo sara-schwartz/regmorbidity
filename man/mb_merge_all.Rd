@@ -9,7 +9,7 @@ mb_merge_all(
   medication_dir = NULL,
   codes = mb_codelist(),
   conditions = NULL,
-  id_col = "PNR",
+  id_col = "pnr",
   verbose = TRUE
 )
 }

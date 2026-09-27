@@ -72,8 +72,11 @@ mb_normalize_icd10 <- function(x) {
 #' @param outdir Directory for one `.rds` per condition. `NULL` = return the
 #'   results as a named list instead of writing anything.
 #' @param resume Skip conditions whose `.rds` is already in `outdir`.
-#' @param id_col,code_col,date_col Column names. Defaults match the LPR2 names
-#'   used in `streamlineMM.R`.
+#' @param id_col,code_col,date_col Column names. `code_col` and `date_col`
+#'   default to `C_DIAG`/`D_INDDTO`, the LPR2 names used in `streamlineMM.R`
+#'   and DST's own field names, kept as-is. `id_col` defaults to lowercase
+#'   `pnr`, matching this package's own convention rather than her renamed
+#'   `PNR` - see DECISIONS.md.
 #' @param year_col,year_min Optional year restriction. Unlike the medication
 #'   side this defaults to `NULL`: Prior applies no year floor to diagnoses, and
 #'   an earlier diagnosis is exactly what a lookback is for.
@@ -83,6 +86,9 @@ mb_normalize_icd10 <- function(x) {
 #'   incomparable. One contact coding both I500 and I509 is one day either way.
 #' @param keep_records Also write `<condition>_records.rds`, the matched
 #'   diagnoses before the first-per-person step. Large.
+#' @param ids Restrict to these person ids before anything else runs, via a
+#'   join rather than a literal list - see [mb_restrict_ids()]. `NULL`
+#'   (default) keeps everyone.
 #' @param verbose Print progress.
 #' @return With `outdir`: a summary data frame, invisibly. Without: a named list
 #'   of per-condition data frames, with the summary attached as an attribute.
@@ -93,13 +99,14 @@ mb_extract_diagnosis <- function(lpr,
                               codes        = mb_codelist(),
                               outdir       = NULL,
                               resume       = TRUE,
-                              id_col       = "PNR",
+                              id_col       = "pnr",
                               code_col     = "C_DIAG",
                               date_col     = "D_INDDTO",
                               year_col     = "year",
                               year_min     = NULL,
                               dedupe_same_day = TRUE,
                               keep_records = FALSE,
+                              ids          = NULL,
                               verbose      = TRUE) {
 
   if (!requireNamespace("dplyr", quietly = TRUE)) {
@@ -153,7 +160,8 @@ mb_extract_diagnosis <- function(lpr,
         lpr = lpr, condition = condition, codes = codes,
         id_col = id_col, code_col = code_col, date_col = date_col,
         year_col = year_col, year_min = year_min,
-        dedupe_same_day = dedupe_same_day, keep_records = keep_records
+        dedupe_same_day = dedupe_same_day, keep_records = keep_records,
+        ids = ids
       )
     }
   )
@@ -167,7 +175,7 @@ mb_extract_diagnosis <- function(lpr,
 mb_diagnose_one <- function(lpr, condition, codes,
                             id_col, code_col, date_col,
                             year_col, year_min, dedupe_same_day = TRUE,
-                            keep_records = FALSE) {
+                            keep_records = FALSE, ids = NULL) {
 
   rules         <- codes[codes$condition == condition, , drop = FALSE]
   include_codes <- mb_normalize_icd10(unique(rules$code[!rules$exclude]))
@@ -182,7 +190,7 @@ mb_diagnose_one <- function(lpr, condition, codes,
   # The pushed-down filter has to run on the raw column, which still carries the
   # Danish D. Matching "D?" plus the WHO pattern lets the database do the work
   # without a normalising pass over the whole register first.
-  query <- lpr
+  query <- mb_restrict_ids(lpr, id_col, ids)
   if (!is.null(year_min)) {
     query <- dplyr::filter(query, .data[[year_col]] >= !!year_min)
   }

@@ -51,7 +51,9 @@ if (requireNamespace("regmorbidity", quietly = TRUE)) {
   # Internals the suite reaches into. They are not public on purpose, so they
   # have to be fetched explicitly here - and R CMD check runs against the
   # INSTALLED package, which is the configuration that catches a missing one.
-  for (nm in c("MB_CODELIST_COLS", "mb_run_conditions")) {
+  for (nm in c("MB_CODELIST_COLS", "mb_run_conditions", "mb_restrict_ids",
+               "mb_lookback_days", "mb_rule_batches", "mb_batch_query",
+               "mb_is_lazy")) {
     assign(nm, get(nm, envir = asNamespace("regmorbidity")))
   }
   CODES <- system.file("extdata", "codelists", package = "regmorbidity")
@@ -111,50 +113,50 @@ cat("\n=== 4. the 2-prescription rule ===\n")
 # p3: two boxes on the SAME day      -> one dispensing after dedupe, no onset
 # p4: one C09 only                   -> no onset
 lmdb <- data.frame(
-  PNR  = c("p1","p1", "p2","p2", "p3","p3", "p4"),
-  ATC  = c("C09AA05","C09CA01", "C09AA05","C09AA05", "C09AA05","C09CA01", "C09AA05"),
+  pnr  = c("p1","p1", "p2","p2", "p3","p3", "p4"),
+  atc  = c("C09AA05","C09CA01", "C09AA05","C09AA05", "C09AA05","C09CA01", "C09AA05"),
   atc2 = "C09",
-  EKSD = as.Date(c("2010-01-10","2010-02-10", "2010-01-10","2013-01-10",
+  eksd = as.Date(c("2010-01-10","2010-02-10", "2010-01-10","2013-01-10",
                    "2010-05-01","2010-05-01", "2010-01-10")),
   year = c(2010,2010, 2010,2013, 2010,2010, 2010),
   stringsAsFactors = FALSE
 )
 res <- mb_extract_medication(lmdb, "hypertension", codes = codes, verbose = FALSE)[["hypertension"]]
-ok("only p1 qualifies", identical(res$PNR, "p1"))
+ok("only p1 qualifies", identical(res$pnr, "p1"))
 ok("onset = 2nd dispensing", res$onset_date == as.Date("2010-02-10"))
-ok("p3 same-day pair does not qualify", !"p3" %in% res$PNR)
+ok("p3 same-day pair does not qualify", !"p3" %in% res$pnr)
 
 res_nodedupe <- mb_extract_medication(lmdb, "hypertension", codes = codes,
                                    dedupe_same_day = FALSE, verbose = FALSE)[["hypertension"]]
-ok("without dedupe, p3 would qualify", "p3" %in% res_nodedupe$PNR)
+ok("without dedupe, p3 would qualify", "p3" %in% res_nodedupe$pnr)
 
 res_nowin <- mb_extract_medication(lmdb, "hypertension",
                                 codes = transform(codes, window_days = NA_integer_),
                                 verbose = FALSE)[["hypertension"]]
-ok("with no window, p2 qualifies too", all(c("p1","p2") %in% res_nowin$PNR))
+ok("with no window, p2 qualifies too", all(c("p1","p2") %in% res_nowin$pnr))
 # 5. Two-stage matching ----
 
 cat("\n=== 5. stage 2 separates codes sharing a stage-1 prefix ===\n")
 # N02A = pain, N02C = migraine. Both sit under atc2 = "N02".
 lmdb2 <- data.frame(
-  PNR  = c(rep("a", 4), rep("b", 2)),
-  ATC  = c("N02AA05","N02AA05","N02AA05","N02AA05", "N02CC01","N02CC01"),
+  pnr  = c(rep("a", 4), rep("b", 2)),
+  atc  = c("N02AA05","N02AA05","N02AA05","N02AA05", "N02CC01","N02CC01"),
   atc2 = "N02",
-  EKSD = as.Date(c("2010-01-01","2010-02-01","2010-03-01","2010-04-01",
+  eksd = as.Date(c("2010-01-01","2010-02-01","2010-03-01","2010-04-01",
                    "2010-01-01","2010-02-01")),
   year = 2010, stringsAsFactors = FALSE
 )
 r <- mb_extract_medication(lmdb2, c("pain","migraine"), codes = codes, verbose = FALSE)
-ok("pain finds only a", identical(r$pain$PNR, "a"))
-ok("migraine finds only b", identical(r$migraine$PNR, "b"))
+ok("pain finds only a", identical(r$pain$pnr, "a"))
+ok("migraine finds only b", identical(r$migraine$pnr, "b"))
 ok("pain onset = 4th (min_prescriptions = 4)",
    r$pain$onset_date == as.Date("2010-04-01"))
 # 6. Anchoring ----
 
 cat("\n=== 6. anchoring ===\n")
 # An unanchored 'C09' would also match a code that merely contains it.
-lmdb3 <- data.frame(PNR = c("x","x"), ATC = c("XC09AA","XC09AA"), atc2 = "C09",
-                    EKSD = as.Date(c("2010-01-01","2010-02-01")), year = 2010,
+lmdb3 <- data.frame(pnr = c("x","x"), atc = c("XC09AA","XC09AA"), atc2 = "C09",
+                    eksd = as.Date(c("2010-01-01","2010-02-01")), year = 2010,
                     stringsAsFactors = FALSE)
 r3 <- mb_extract_medication(lmdb3, "hypertension", codes = codes, verbose = FALSE)[["hypertension"]]
 ok("mid-string match rejected", nrow(r3) == 0)
@@ -176,9 +178,9 @@ ok("resume = FALSE re-runs", all(s3$status == "done"))
 
 cat("\n=== 8. a failing condition does not kill the batch ===\n")
 lmdb_bad <- rbind(lmdb,
-                  data.frame(PNR = "p9", ATC = "C10AA01", atc2 = "C10",
-                             EKSD = as.Date("2010-01-01"), year = 2010))
-lmdb_bad$EKSD <- "not-a-date"   # both conditions now match, both fail to parse
+                  data.frame(pnr = "p9", atc = "C10AA01", atc2 = "C10",
+                             eksd = as.Date("2010-01-01"), year = 2010))
+lmdb_bad$eksd <- "not-a-date"   # both conditions now match, both fail to parse
 sfail <- suppressWarnings(
   mb_extract_medication(lmdb_bad, c("hypertension","dyslipidemia"), codes = codes,
                      outdir = od, resume = FALSE, verbose = FALSE))
@@ -197,41 +199,41 @@ mb_extract_medication(lmdb2, c("pain","migraine"), codes = codes, outdir = od,
                    verbose = FALSE)
 long <- mb_load_conditions(od)
 ok("2 person-condition rows", nrow(long) == 2)
-wide <- mb_to_wide(long, id_col = "PNR")
+wide <- mb_to_wide(long, id_col = "pnr")
 ok("one column per condition", all(c("pain","migraine") %in% names(wide)))
-cnt <- mb_count_conditions(wide, id_col = "PNR")
+cnt <- mb_count_conditions(wide, id_col = "pnr")
 ok("each person has 1 condition", all(cnt$n_conditions == 1))
 ok("nobody multimorbid", !any(cnt$multimorbid))
-cnt_early <- mb_count_conditions(wide, id_col = "PNR", as_of = "2010-01-15")
+cnt_early <- mb_count_conditions(wide, id_col = "pnr", as_of = "2010-01-15")
 ok("as_of excludes later onsets", sum(cnt_early$n_conditions) == 0)
 # 10. flag_users() ----
 
 cat("\n=== 10. flag_users() keeps Jie's calling convention ===\n")
-disp <- data.frame(PNR = c("q","q","q"), ATC = "C09AA05",
-                   EKSD = as.Date(c("2010-01-01","2010-02-01","2010-03-01")),
+disp <- data.frame(pnr = c("q","q","q"), atc = "C09AA05",
+                   eksd = as.Date(c("2010-01-01","2010-02-01","2010-03-01")),
                    stringsAsFactors = FALSE)
-f1 <- mb_flag_users(disp, ATC, min_prescriptions = 2)
-f2 <- mb_flag_users(disp, "ATC", min_prescriptions = 2)
+f1 <- mb_flag_users(disp, atc, min_prescriptions = 2)
+f2 <- mb_flag_users(disp, "atc", min_prescriptions = 2)
 ok("bare column name works", nrow(f1) == 1 && f1$onset_date == as.Date("2010-02-01"))
 ok("string column name works", identical(f1, f2))
 ok("n_records reported",f1$n_records == 3)
 # 11. Missing prefilter column ----
 
 cat("\n=== 11. missing prefilter column falls back ===\n")
-lmdb4 <- lmdb[, c("PNR","ATC","EKSD","year")]
+lmdb4 <- lmdb[, c("pnr","atc","eksd","year")]
 r4 <- mb_extract_medication(lmdb4, "hypertension", codes = codes, verbose = FALSE)[["hypertension"]]
-ok("still finds p1 without atc2", identical(r4$PNR, "p1"))
+ok("still finds p1 without atc2", identical(r4$pnr, "p1"))
 # 12. Short codes ----
 
 cat("\n=== 12. codes shorter than the prefilter column ===\n")
 short <- rbind(codes[codes$condition == "hypertension", ][1, ])
 short$code <- "C0"; short$condition <- "short_code"
-lmdb5 <- data.frame(PNR = c("z","z"), ATC = c("C09AA05","C01DA02"), atc2 = c("C09","C01"),
-                    EKSD = as.Date(c("2010-01-01","2010-02-01")), year = 2010,
+lmdb5 <- data.frame(pnr = c("z","z"), atc = c("C09AA05","C01DA02"), atc2 = c("C09","C01"),
+                    eksd = as.Date(c("2010-01-01","2010-02-01")), year = 2010,
                     stringsAsFactors = FALSE)
 r5 <- mb_extract_medication(lmdb5, "short_code", codes = rbind(codes, short),
                          verbose = FALSE)[["short_code"]]
-ok("2-char code matched via full ATC column", nrow(r5) == 1 && r5$PNR == "z")
+ok("2-char code matched via full atc column", nrow(r5) == 1 && r5$pnr == "z")
 # 13. mb_check_codes() ----
 
 cat("\n=== 13. mb_check_codes finds codes that match nothing ===\n")
@@ -264,8 +266,8 @@ if (length(bad)) cat("     mismatched:", paste(bad, collapse = ", "), "\n")
 
 cat("\n=== 15. year_min defaults to 1997 ===\n")
 ok("default is 1997", formals(mb_extract_medication)$year_min == 1997)
-old <- data.frame(PNR = c("o","o"), ATC = "C09AA05", atc2 = "C09",
-                  EKSD = as.Date(c("1995-01-01","1995-06-01")), year = 1995,
+old <- data.frame(pnr = c("o","o"), atc = "C09AA05", atc2 = "C09",
+                  eksd = as.Date(c("1995-01-01","1995-06-01")), year = 1995,
                   stringsAsFactors = FALSE)
 ok("1995 dropped by default",
    nrow(mb_extract_medication(old, "hypertension", codes = codes,
@@ -274,7 +276,7 @@ ok("year_min = NULL keeps 1995",
    nrow(mb_extract_medication(old, "hypertension", codes = codes, year_min = NULL,
                            verbose = FALSE)[["hypertension"]]) == 1)
 ok("missing year column errors clearly",
-   inherits(try(mb_extract_medication(old[, c("PNR","ATC","atc2","EKSD")],
+   inherits(try(mb_extract_medication(old[, c("pnr","atc","atc2","eksd")],
                                    "hypertension", codes = codes,
                                    verbose = FALSE), silent = TRUE), "try-error"))
 
@@ -303,43 +305,43 @@ dx_codes <- data.frame(
   stringsAsFactors = FALSE
 )
 lpr <- data.frame(
-  PNR      = c("a", "a", "b", "c"),
+  pnr      = c("a", "a", "b", "c"),
   C_DIAG   = c("DI500", "DI509", "DD86", "DI10"),
   D_INDDTO = as.Date(c("2005-03-01", "2001-01-01", "2009-05-05", "2000-01-01")),
   stringsAsFactors = FALSE
 )
 dx <- mb_extract_diagnosis(lpr, codes = dx_codes, verbose = FALSE)
-ok("heart failure finds a", identical(dx$hf$PNR, "a"))
+ok("heart failure finds a", identical(dx$hf$pnr, "a"))
 ok("onset is the EARLIEST diagnosis", dx$hf$onset_date == as.Date("2001-01-01"))
 ok("both records counted", dx$hf$n_records == 2)
 ok("source labelled", dx$hf$source == "diagnosis")
 ok("D86 written without the D prefix still matches DD86",
-   identical(dx$connective$PNR, "b"))
+   identical(dx$connective$pnr, "b"))
 ok("DI10 not picked up by either condition",
-   !"c" %in% c(dx$hf$PNR, dx$connective$PNR))
+   !"c" %in% c(dx$hf$pnr, dx$connective$pnr))
 
 
 # 18. Merging the two halves ----
 
 cat("\n=== 18. OR / AND merge ===\n")
-dxh <- data.frame(PNR = c("p","q"), condition = "x", source = "diagnosis",
+dxh <- data.frame(pnr = c("p","q"), condition = "x", source = "diagnosis",
                   onset_date = as.Date(c("2005-01-01","2007-01-01")),
                   stringsAsFactors = FALSE)
-rxh <- data.frame(PNR = c("p","r"), condition = "x", source = "medication",
+rxh <- data.frame(pnr = c("p","r"), condition = "x", source = "medication",
                   onset_date = as.Date(c("2003-01-01","2008-01-01")),
                   stringsAsFactors = FALSE)
 
 m_or <- mb_merge_conditions(dxh, rxh, logic = "OR")
-ok("OR keeps everyone", setequal(m_or$PNR, c("p","q","r")))
+ok("OR keeps everyone", setequal(m_or$pnr, c("p","q","r")))
 ok("OR takes the earlier date",
-   m_or$onset_date[m_or$PNR == "p"] == as.Date("2003-01-01"))
+   m_or$onset_date[m_or$pnr == "p"] == as.Date("2003-01-01"))
 ok("source = both where both halves present",
-   m_or$source[m_or$PNR == "p"] == "both")
+   m_or$source[m_or$pnr == "p"] == "both")
 ok("source = diagnosis where only that half",
-   m_or$source[m_or$PNR == "q"] == "diagnosis")
+   m_or$source[m_or$pnr == "q"] == "diagnosis")
 
 m_and <- mb_merge_conditions(dxh, rxh, logic = "AND")
-ok("AND keeps only p", identical(m_and$PNR, "p"))
+ok("AND keeps only p", identical(m_and$pnr, "p"))
 ok("AND takes the LATER date",
    m_and$onset_date == as.Date("2005-01-01"))
 
@@ -378,7 +380,7 @@ ok("both conditions present",
 cat("\n=== 20. code list diffing ===\n")
 base_cl <- data.frame(
   condition = c("dm","dm","bt","gone"),
-  vocab_id  = c("ATC","ICD10","ATC","ATC"),
+  vocab_id  = c("atc","ICD10","atc","atc"),
   code      = c("A10A","E10","C09","M04"),
   min_prescriptions = c(2,NA,2,2),
   window_days = c(365,NA,365,365),
@@ -395,7 +397,7 @@ ok("case and row order are not changes",
    nrow(mb_compare(base_cl, noise, verbose = FALSE)) == 0)
 
 edited <- base_cl[base_cl$condition != "gone", ]
-edited$code[edited$condition == "dm" & edited$vocab_id == "ATC"] <- "A10B"
+edited$code[edited$condition == "dm" & edited$vocab_id == "atc"] <- "A10B"
 edited <- rbind(edited, data.frame(condition = "new", vocab_id = "ICD10",
                                    code = "I50", min_prescriptions = NA,
                                    window_days = NA, stringsAsFactors = FALSE))
@@ -475,7 +477,7 @@ ok("unknown code returns nothing", nrow(mb_lookup("ZZZZ", ov_codes)) == 0)
 
 cat("\n=== 22. counts on both halves ===\n")
 lpr2 <- data.frame(
-  PNR      = c("a","a","a","b"),
+  pnr      = c("a","a","a","b"),
   C_DIAG   = c("DI500","DI509","DI50","DI50"),   # two codes, same day
   D_INDDTO = as.Date(c("2005-01-01","2005-01-01","2008-01-01","2001-01-01")),
   stringsAsFactors = FALSE)
@@ -484,21 +486,21 @@ hf <- data.frame(condition="hf", vocab_id="ICD10", code="I50",
 
 d_dedup <- mb_extract_diagnosis(lpr2, codes = hf, verbose = FALSE)$hf
 ok("same-day records count once by default",
-   d_dedup$n_records[d_dedup$PNR == "a"] == 2)
+   d_dedup$n_records[d_dedup$pnr == "a"] == 2)
 d_raw <- mb_extract_diagnosis(lpr2, codes = hf, dedupe_same_day = FALSE,
                            verbose = FALSE)$hf
 ok("without dedup they count separately",
-   d_raw$n_records[d_raw$PNR == "a"] == 3)
+   d_raw$n_records[d_raw$pnr == "a"] == 3)
 ok("onset unaffected by dedup",
-   d_dedup$onset_date[d_dedup$PNR == "a"] == as.Date("2005-01-01"))
+   d_dedup$onset_date[d_dedup$pnr == "a"] == as.Date("2005-01-01"))
 
-rxh2 <- data.frame(PNR = "a", condition = "hf", onset_date = as.Date("2004-01-01"),
+rxh2 <- data.frame(pnr = "a", condition = "hf", onset_date = as.Date("2004-01-01"),
                    n_records = 7L, stringsAsFactors = FALSE)
 mg <- mb_merge_conditions(d_dedup, rxh2, logic = "OR")
-ok("n_icd carried into the merge", mg$n_icd[mg$PNR == "a"] == 2)
-ok("n_rx carried into the merge",  mg$n_rx[mg$PNR == "a"] == 7)
+ok("n_icd carried into the merge", mg$n_icd[mg$pnr == "a"] == 2)
+ok("n_rx carried into the merge",  mg$n_rx[mg$pnr == "a"] == 7)
 ok("n_rx is NA where there is no medication half",
-   is.na(mg$n_rx[mg$PNR == "b"]))
+   is.na(mg$n_rx[mg$pnr == "b"]))
 
 
 # 23. NAMESPACE is generated, and exports only what it should ----
@@ -524,12 +526,13 @@ if (is.na(pkg_root)) {
   expected <- sort(c(
     "mb_codelist", "mb_validate_codelist", "mb_write_codelist",
     "mb_inspect_codes", "mb_check_codes", "mb_overlap", "mb_lookup",
-    "mb_compare", "mb_extract_medication", "mb_extract_diagnosis", "mb_flag_users",
+    "mb_compare", "mb_extract_medication", "mb_extract_medication_batch",
+    "mb_extract_diagnosis", "mb_flag_users",
     "mb_normalize_icd10", "mb_merge_conditions", "mb_merge_all",
     "mb_condition_logic", "mb_load_conditions", "mb_to_wide",
-    "mb_count_conditions"))
+    "mb_count_conditions", "mb_prevalence", "mb_prevalence_all"))
 
-  ok("exactly the intended 18 functions are public",
+  ok("exactly the intended 21 functions are public",
      identical(declared, expected))
   if (!identical(declared, expected)) {
     cat("     unexpectedly public:", paste(setdiff(declared, expected), collapse = ", "), "\n")
@@ -551,8 +554,8 @@ cat("\n=== 24. review regressions ===\n")
 rev_codes <- data.frame(condition = "dm", vocab_id = "ATC", code = "A10A",
                         min_prescriptions = 2, window_days = 365,
                         stringsAsFactors = FALSE)
-rev_lmdb <- data.frame(PNR = c("a","a"), ATC = "A10AB01", atc2 = "A10",
-                       EKSD = as.Date(c("2005-01-01","2005-02-01")), year = 2005,
+rev_lmdb <- data.frame(pnr = c("a","a"), atc = "A10AB01", atc2 = "A10",
+                       eksd = as.Date(c("2005-01-01","2005-02-01")), year = 2005,
                        stringsAsFactors = FALSE)
 
 # side files must not be read back as conditions
@@ -575,7 +578,7 @@ ok("worker cannot overwrite the driver's summary fields",
    clash$summary$condition == "x" && clash$summary$status == "done")
 
 # duplicated person-condition rows are a warning, not a silent choice
-dup <- data.frame(PNR = c("a","a"), condition = "c",
+dup <- data.frame(pnr = c("a","a"), condition = "c",
                   onset_date = as.Date(c("2005-01-01","2001-01-01")),
                   stringsAsFactors = FALSE)
 ok("mb_to_wide warns on duplicate person rows",
@@ -586,3 +589,474 @@ src <- if (dir.exists("../R")) "../R" else "R"
 non_ascii <- unlist(lapply(list.files(src, pattern = "\\.R$", full.names = TRUE),
   function(f) grep("[^\x01-\x7F]", readLines(f, warn = FALSE), value = TRUE)))
 ok("no non-ASCII characters in R/", length(non_ascii) == 0)
+
+
+# 25. mb_prevalence() ----
+
+cat("\n=== 25. mb_prevalence() ===\n")
+
+prev_codes <- data.frame(condition = "dm", vocab_id = "ATC", code = "A10A",
+                         min_prescriptions = 2, window_days = 365,
+                         stringsAsFactors = FALSE)
+prev_lmdb <- data.frame(
+  pnr  = c("a","a","a",  "b",         "c","c",         "d","d"),
+  atc  = "A10AB01",
+  atc2 = "A10",
+  eksd = as.Date(c("2005-01-01","2005-02-01","2010-01-01",
+                   "2005-01-01",
+                   "2020-01-01","2020-02-01",
+                   "2004-06-01","2005-03-01")),
+  year = c(2005,2005,2010, 2005, 2020,2020, 2004,2005),
+  stringsAsFactors = FALSE)
+
+# a: qualifies by 2005-02-01 (2 within 365d), and has a later, irrelevant
+#    dispensing in 2010
+# b: only ever one dispensing - never qualifies
+# c: qualifies, but only in 2020 - after as_of below
+# d: qualifies over the full history (2004-06-01, 2005-03-01 are 273 days
+#    apart), but the pair straddles the lookback boundary used below
+
+pd <- file.path(tempdir(), "prevdisp"); unlink(pd, recursive = TRUE)
+mb_extract_medication(prev_lmdb, codes = prev_codes, outdir = pd,
+                   save_dispensings = TRUE, verbose = FALSE)
+full <- readRDS(file.path(pd, "dm.rds"))
+disp <- readRDS(file.path(pd, "dm_dispensings.rds"))
+
+as_of <- as.Date("2006-01-01")
+
+## 25a. lookback = Inf reproduces mb_count_conditions() exactly ----
+prev_inf <- mb_prevalence(disp, as_of = as_of, lookback = Inf,
+                          min_prescriptions = 2, window_days = 365)
+
+wide <- mb_to_wide(full, value = "onset_date")
+counted <- mb_count_conditions(wide, as_of = as_of)
+
+# Bug found while building this test: as.matrix() on a Date column formats it
+# to a date STRING, so the as_of comparison in mb_count_conditions() was a
+# string compared against a raw numeric day count - never true either way.
+# Fixed in combine.R by converting each column explicitly instead.
+ok("mb_count_conditions(as_of=) counts an onset that occurred before as_of",
+   counted$n_conditions[counted$pnr == "a"] == 1)
+ok("mb_count_conditions(as_of=) does not count an onset that occurred after as_of",
+   counted$n_conditions[counted$pnr == "c"] == 0)
+
+# one condition column, so n_conditions is 0/1 - "has dm as of as_of"
+has_dm <- counted$pnr[counted$n_conditions >= 1]
+
+ok("only people whose onset was by as_of are prevalent",
+   setequal(prev_inf$pnr, has_dm))
+ok("that is a and d, not b (never qualifies) or c (qualifies too late)",
+   identical(sort(prev_inf$pnr), c("a", "d")))
+ok("onset_date matches the full extraction, unaffected by the as_of cutoff",
+   prev_inf$onset_date[prev_inf$pnr == "a"] ==
+     full$onset_date[full$pnr == "a"])
+ok("n_records is restricted to records at or before as_of, unlike the full run",
+   prev_inf$n_records[prev_inf$pnr == "a"] == 2 &&
+     full$n_records[full$pnr == "a"] == 3)
+
+## 25b. a finite lookback excludes an onset that is too old ----
+prev_short <- mb_prevalence(disp, as_of = as_of, lookback = 200,
+                            min_prescriptions = 2, window_days = 365)
+ok("a's dispensings (2005-01-01, 2005-02-01) are both outside a 200-day
+    lookback from as_of (2006-01-01)",
+   !"a" %in% prev_short$pnr)
+
+## 25c. the window-boundary fix: a qualifying pair split across the naive
+##      restriction boundary is still found, by widening the candidate set by
+##      window_days and reporting the latest qualifying run instead of the
+##      first (d's pair is 2004-06-01 and 2005-03-01, 273 days apart, and the
+##      naive [as_of - lookback, as_of] restriction below would cut off
+##      2004-06-01 alone)
+prev_split <- mb_prevalence(disp, as_of = as.Date("2005-06-01"),
+                            lookback = 300, id_col = pnr,
+                            min_prescriptions = 2, window_days = 365)
+ok("d's pair straddles the naive boundary but is still found",
+   "d" %in% prev_split$pnr)
+ok("the onset reported is the pair's later date, not the widened window's edge",
+   prev_split$onset_date[prev_split$pnr == "d"] == as.Date("2005-03-01"))
+
+## 25c2. the fix does not manufacture evidence that is not there: a pair that
+##      completed genuinely before the true lookback boundary, even with the
+##      widened candidate set, is still excluded
+too_old <- mb_prevalence(disp, as_of = as.Date("2007-01-01"), lookback = 300,
+                         min_prescriptions = 2, window_days = 365)
+ok("d's pair (completing 2005-03-01) is really too old for this lookback",
+   !"d" %in% too_old$pnr)
+
+## 25c3. the fix only applies when there is a fixed span to widen by. With
+##      window_days = NA (any distance apart) there is none, so the original
+##      straddle limitation still applies - this is the one that remains in
+##      ASSUMPTIONS_AND_LIMITATIONS.txt section 7
+prev_na <- mb_prevalence(disp, as_of = as.Date("2005-06-01"), lookback = 300,
+                         min_prescriptions = 2, window_days = NA)
+ok("with window_days = NA there is no span to widen by, so d is still missed",
+   !"d" %in% prev_na$pnr)
+
+## 25d. min_prescriptions = 1 reduces to "any qualifying record in window",
+##      the diagnosis-side use
+diag_records <- data.frame(pnr = c("e","e","f"),
+                           C_DIAG = c("DI500","DI509","DI500"),
+                           D_INDDTO = as.Date(c("2004-01-01","2005-01-01",
+                                                 "2020-01-01")),
+                           stringsAsFactors = FALSE)
+prev_diag <- mb_prevalence(diag_records, as_of = as_of, lookback = Inf,
+                           code_col = C_DIAG, min_prescriptions = 1,
+                           id_col = pnr, date_col = D_INDDTO)
+ok("one qualifying diagnosis in the window is enough",
+   setequal(prev_diag$pnr, "e"))
+
+## 25e. as_of and lookback_days are carried onto the output for audit
+ok("as_of is recorded on the result",
+   all(prev_inf$as_of == as_of))
+ok("lookback_days is NA when the lookback was Inf",
+   all(is.na(prev_inf$lookback_days)))
+ok("lookback_days is recorded when finite",
+   all(prev_short$lookback_days == 200))
+
+## 25f. bad arguments refuse rather than guess
+ok("as_of must be length 1",
+   inherits(tryCatch(mb_prevalence(disp, as_of = as.Date(c("2005-01-01",
+                                                            "2006-01-01"))),
+                     error = function(e) e), "error"))
+ok("lookback must be positive",
+   inherits(tryCatch(mb_prevalence(disp, as_of = as_of, lookback = 0),
+                     error = function(e) e), "error"))
+
+
+# 26. ids= cohort restriction (DECISIONS.md 7.5) ----
+
+cat("\n=== 26. ids= restricts to a cohort before anything else runs ===\n")
+
+ids_codes <- data.frame(condition = "dm", vocab_id = "ATC", code = "A10A",
+                        min_prescriptions = 1, window_days = NA,
+                        stringsAsFactors = FALSE)
+ids_lmdb <- data.frame(pnr = c("a", "b", "c"), atc = "A10AB01",
+                       atc2 = "A10",
+                       eksd = as.Date("2010-01-01"), year = 2010,
+                       stringsAsFactors = FALSE)
+
+full_result <- mb_extract_medication(ids_lmdb, codes = ids_codes,
+                                     outdir = NULL, verbose = FALSE)$dm
+ok("ids = NULL (default) keeps everyone, unchanged",
+   setequal(full_result$pnr, c("a", "b", "c")))
+
+restricted <- mb_extract_medication(ids_lmdb, codes = ids_codes,
+                                    outdir = NULL, verbose = FALSE,
+                                    ids = c("a", "c"))$dm
+ok("ids = restricts to exactly that cohort",
+   setequal(restricted$pnr, c("a", "c")))
+ok("a person not in ids never appears, even though they match the codes",
+   !"b" %in% restricted$pnr)
+
+ids_lpr <- data.frame(pnr = c("a", "b"), C_DIAG = "DI10",
+                      D_INDDTO = as.Date("2010-01-01"),
+                      stringsAsFactors = FALSE)
+ids_dx_codes <- data.frame(condition = "hf", vocab_id = "ICD10", code = "I10",
+                           exclude = FALSE, stringsAsFactors = FALSE)
+restricted_dx <- mb_extract_diagnosis(ids_lpr, codes = ids_dx_codes,
+                                      outdir = NULL, verbose = FALSE,
+                                      ids = "a")$hf
+ok("ids = works the same way on the diagnosis side",
+   identical(restricted_dx$pnr, "a"))
+
+## 26b. against a real lazy backend, not just a data frame - confirms the
+##      restriction is an actual JOIN in the generated SQL, not a silent
+##      fallback to collecting everyone and filtering in R afterward
+if (requireNamespace("DBI", quietly = TRUE) &&
+    requireNamespace("duckdb", quietly = TRUE) &&
+    requireNamespace("dbplyr", quietly = TRUE)) {
+
+  con <- DBI::dbConnect(duckdb::duckdb())
+  DBI::dbWriteTable(con, "lmdb_lazy", ids_lmdb)
+  lazy_lmdb <- dplyr::tbl(con, "lmdb_lazy")
+
+  lazy_query <- mb_restrict_ids(lazy_lmdb, "pnr", c("a", "c"))
+  sql_text <- toupper(as.character(dbplyr::remote_query(lazy_query)))
+  # dbplyr translates semi_join() to a correlated "WHERE EXISTS" subquery
+  # against a copied-in temp table, not the literal word JOIN - that is the
+  # standard SQL form for a semi-join, and this is what proves the
+  # restriction runs server-side rather than collecting everyone first.
+  ok("mb_restrict_ids() pushes the restriction into the SQL (WHERE EXISTS)",
+     grepl("WHERE", sql_text, fixed = TRUE) &&
+       grepl("EXISTS", sql_text, fixed = TRUE))
+
+  lazy_result <- mb_extract_medication(lazy_lmdb, codes = ids_codes,
+                                       outdir = NULL, verbose = FALSE,
+                                       ids = c("a", "c"))$dm
+  ok("mb_extract_medication() against a lazy backend gives the same answer",
+     setequal(lazy_result$pnr, c("a", "c")))
+
+  DBI::dbDisconnect(con, shutdown = TRUE)
+} else {
+  cat("  SKIP   duckdb/dbplyr not installed - lazy-backend check skipped\n")
+}
+
+
+# 27. mb_prevalence_all() - every condition, its own lookback, one call ----
+
+cat("\n=== 27. mb_prevalence_all() ===\n")
+
+pa_codes <- data.frame(
+  condition = c("dm", "htn"), vocab_id = "ATC", code = c("A10A", "C02"),
+  min_prescriptions = 2, window_days = 365, stringsAsFactors = FALSE)
+
+pa_lmdb <- data.frame(
+  pnr  = c("a","a","a", "b",       "c","c",       "d","d",       "e","e"),
+  atc  = c(rep("A10AB01", 3), "A10AB01", rep("C02CA01", 2),
+           rep("A10AB01", 2), rep("C02CA01", 2)),
+  atc2 = c(rep("A10", 4), rep("C02", 2), rep("A10", 2), rep("C02", 2)),
+  eksd = as.Date(c("2005-01-01","2005-02-01","2010-01-01",
+                   "2005-01-01",
+                   "2020-01-01","2020-02-01",
+                   "2004-06-01","2005-03-01",
+                   "2005-01-01","2005-06-01")),
+  year = c(2005,2005,2010, 2005, 2020,2020, 2004,2005, 2005,2005),
+  stringsAsFactors = FALSE)
+# e is htn's own qualifying person, onset well before as_of (2006-01-01) -
+# c (also htn) qualifies too, but only in 2020, after as_of, so c alone
+# would leave htn empty and silently absent from the combined result.
+
+pa_dir <- file.path(tempdir(), "prevall"); unlink(pa_dir, recursive = TRUE)
+mb_extract_medication(pa_lmdb, codes = pa_codes, outdir = pa_dir,
+                      save_dispensings = TRUE, verbose = FALSE)
+
+pa_as_of <- as.Date("2006-01-01")
+
+## 27a. a single lookback value applies to every condition, and matches
+##      calling mb_prevalence() by hand for the same condition
+pa_single <- mb_prevalence_all(pa_dir, as_of = pa_as_of, lookback = Inf,
+                               codes = pa_codes, verbose = FALSE)
+disp_dm  <- readRDS(file.path(pa_dir, "dm_dispensings.rds"))
+solo_dm  <- mb_prevalence(disp_dm, as_of = pa_as_of, lookback = Inf,
+                          min_prescriptions = 2, window_days = 365)
+ok("mb_prevalence_all() with a single lookback matches a solo mb_prevalence() call",
+   setequal(pa_single$pnr[pa_single$condition == "dm"], solo_dm$pnr))
+ok("both conditions are present in the combined result",
+   setequal(pa_single$condition, c("dm", "htn")))
+
+## 27b. a per-condition lookback table - different conditions, different
+##      values, exactly what B7/DECISIONS.md 4.1 asked for
+pa_lb <- data.frame(condition = c("dm", "htn"),
+                    lookback  = c("ever", "last_two_years"),
+                    stringsAsFactors = FALSE)
+pa_multi <- mb_prevalence_all(pa_dir, as_of = pa_as_of, lookback = pa_lb,
+                              codes = pa_codes, verbose = FALSE)
+ok("a lookback word ('ever') resolves to Inf",
+   all(is.na(pa_multi$lookback_days[pa_multi$condition == "dm"])))
+ok("a lookback word ('last_two_years') resolves to 730 days",
+   all(pa_multi$lookback_days[pa_multi$condition == "htn"] == 730))
+
+## 27c. a condition missing from the lookback table defaults to Inf, with a
+##      message rather than an error
+pa_lb_partial <- data.frame(condition = "dm", lookback = "ever",
+                            stringsAsFactors = FALSE)
+msg <- tryCatch({
+  withCallingHandlers(
+    mb_prevalence_all(pa_dir, as_of = pa_as_of, lookback = pa_lb_partial,
+                      codes = pa_codes, verbose = FALSE),
+    message = function(m) invokeRestart("muffleMessage")
+  )
+  "no error"
+}, error = function(e) conditionMessage(e))
+ok("a condition missing from the lookback table does not error",
+   identical(msg, "no error"))
+
+## 27d. conditions = restricts which files are read, and complains if one is
+##      missing rather than silently skipping it
+ok("an unknown condition name is refused, not silently dropped",
+   inherits(tryCatch(mb_prevalence_all(pa_dir, as_of = pa_as_of,
+                                       conditions = c("dm", "not_a_condition"),
+                                       codes = pa_codes, verbose = FALSE),
+                     error = function(e) e), "error"))
+
+## 27e. an unrecognised lookback word refuses rather than silently becoming NA
+ok("an unrecognised lookback word is refused",
+   inherits(tryCatch(mb_lookback_days("last_year"), error = function(e) e),
+            "error"))
+
+
+# 28. mb_extract_medication_batch() ----
+
+cat("\n=== 28. mb_extract_medication_batch() ===\n")
+
+mb28_codes <- data.frame(
+  condition = c("dm","dm", "htn","htn","htn", "pain","pain"),
+  vocab_id  = "ATC",
+  code      = c("A10A","A10B", "C02","C03","C09", "N02A","M01A"),
+  min_prescriptions = c(2,2, 2,2,2, 4,4),
+  window_days = 365,
+  stringsAsFactors = FALSE)
+
+mb28_lmdb <- data.frame(
+  pnr  = c("a","a","a", "b",       "c","c",       "d","d",   "e","e","e","e"),
+  atc  = c(rep("A10AB01", 3), "A10AB01", rep("C02CA01", 2),
+          rep("A10AB01", 2), rep("N02AA01", 4)),
+  eksd = as.Date(c("2005-01-01","2005-02-01","2010-01-01",
+                   "2005-01-01",
+                   "2020-01-01","2020-02-01",
+                   "2004-06-01","2005-03-01",
+                   "2018-01-01","2018-03-01","2018-05-01","2018-07-01")),
+  year = c(2005,2005,2010, 2005, 2020,2020, 2004,2005, 2018,2018,2018,2018),
+  stringsAsFactors = FALSE)
+# a: qualifies for dm (2005-01-01, 2005-02-01 within 365d); 2010 dispensing
+#    is irrelevant. b: only one dm dispensing - never qualifies. c: two htn
+#    dispensings within 365d. d: dm pair straddling 2004/2005, 273 days
+#    apart - qualifies. e: four pain dispensings within a year - qualifies
+#    on the 4th, the only min_prescriptions = 4 rule.
+
+## 28a. matches mb_extract_medication() exactly, on the same data
+mb28_new <- mb_extract_medication_batch(mb28_lmdb, codes = mb28_codes,
+                                        outdir = NULL, verbose = FALSE)
+mb28_old <- mb_extract_medication(mb28_lmdb, codes = mb28_codes,
+                                  outdir = NULL, verbose = FALSE)
+for (cond in c("dm", "htn", "pain")) {
+  a <- mb28_new[[cond]][order(mb28_new[[cond]]$pnr), ]
+  b <- mb28_old[[cond]][order(mb28_old[[cond]]$pnr), ]
+  ok(paste(cond, "- batch output columns match mb_extract_medication()'s"),
+     identical(names(a), names(b)))
+  ok(paste(cond, "- batch output agrees with mb_extract_medication()"),
+     setequal(a$pnr, b$pnr) && isTRUE(all.equal(a$onset_date, b$onset_date)))
+}
+
+## 28b. exclusion codes (existing per-row exclude = TRUE mechanism)
+mb28_codes_ex <- data.frame(
+  condition = c("ex", "ex"), vocab_id = "ATC", code = c("A10", "A10B"),
+  exclude = c(FALSE, TRUE), min_prescriptions = 2, window_days = 365,
+  stringsAsFactors = FALSE)
+mb28_lmdb_ex <- data.frame(
+  pnr  = c("p1","p1", "p2","p2"),
+  atc  = c("A10AB01","A10AB01", "A10BA01","A10BA01"),
+  eksd = as.Date(c("2020-01-01","2020-02-01", "2020-01-01","2020-02-01")),
+  year = 2020, stringsAsFactors = FALSE)
+mb28_ex <- mb_extract_medication_batch(mb28_lmdb_ex, codes = mb28_codes_ex,
+                                       outdir = NULL, verbose = FALSE)
+ok("exclude = TRUE removes a code from within its own condition",
+   "p1" %in% mb28_ex$ex$pnr && !("p2" %in% mb28_ex$ex$pnr))
+
+## 28c. a condition matching nothing gets a correctly-shaped, empty result
+mb28_codes_zero <- data.frame(
+  condition = c("real", "nothing"), vocab_id = "ATC", code = c("A10", "Z99"),
+  min_prescriptions = 2, window_days = 365, stringsAsFactors = FALSE)
+mb28_zero <- mb_extract_medication_batch(mb28_lmdb, conditions = c("dm", "nothing"),
+                                         codes = rbind(mb28_codes[mb28_codes$condition == "dm", ],
+                                                      mb28_codes_zero["nothing" == mb28_codes_zero$condition, ]),
+                                         outdir = NULL, verbose = FALSE)
+ok("a condition matching nothing gets a 0-row result, not an error",
+   nrow(mb28_zero$nothing) == 0)
+ok("that empty result has the same 8 columns as a real one",
+   identical(names(mb28_zero$nothing), names(mb28_zero$dm)))
+
+## 28d. window_days = NA - any distance apart still qualifies
+mb28_codes_na <- data.frame(condition = "any", vocab_id = "ATC", code = "A10",
+                            min_prescriptions = 2, window_days = NA,
+                            stringsAsFactors = FALSE)
+mb28_lmdb_na <- data.frame(pnr = c("p1","p1"), atc = c("A10AB01","A10AB01"),
+                          eksd = as.Date(c("2000-01-01","2020-01-01")),
+                          year = c(2000,2020), stringsAsFactors = FALSE)
+mb28_na <- mb_extract_medication_batch(mb28_lmdb_na, codes = mb28_codes_na,
+                                       outdir = NULL, year_min = NULL,
+                                       verbose = FALSE)
+ok("window_days = NA - a 20-year gap still qualifies",
+   "p1" %in% mb28_na$any$pnr)
+
+## 28e. year_min is applied upstream, not as a post-hoc filter on onset -
+##      the mechanism behind the bipolar anomaly found on real DST data,
+##      2026-09-26 (TODO.txt section 5)
+mb28_codes_ym <- data.frame(condition = "x", vocab_id = "ATC", code = "A10",
+                           min_prescriptions = 2, window_days = 365,
+                           stringsAsFactors = FALSE)
+mb28_lmdb_ym <- data.frame(
+  pnr = c("p1","p1"), atc = c("A10AB01","A10AB01"),
+  eksd = as.Date(c("1996-12-01","1997-02-01")), year = c(1996,1997),
+  stringsAsFactors = FALSE)
+mb28_ym <- mb_extract_medication_batch(mb28_lmdb_ym, codes = mb28_codes_ym,
+                                       outdir = NULL, year_min = 1997,
+                                       verbose = FALSE)
+ok("year_min removes a pre-cutoff anchor dispensing, not just a post-hoc onset filter",
+   !("p1" %in% mb28_ym$x$pnr))
+
+## 28f. resume is batch-granular: skip only when EVERY condition sharing a
+##      rule already has its .rds; otherwise the whole batch reruns
+mb28_dir <- file.path(tempdir(), "mb28resume"); unlink(mb28_dir, recursive = TRUE)
+mb28_codes_r <- data.frame(condition = c("c1","c2"), vocab_id = "ATC",
+                          code = c("A10","C02"), min_prescriptions = 2,
+                          window_days = 365, stringsAsFactors = FALSE)
+mb28_lmdb_r <- data.frame(pnr = "p1", atc = "A10AB01",
+                         eksd = as.Date("2020-01-01"), year = 2020,
+                         stringsAsFactors = FALSE)
+s1 <- mb_extract_medication_batch(mb28_lmdb_r, codes = mb28_codes_r,
+                                  outdir = mb28_dir, verbose = FALSE)
+ok("first run: both conditions done", all(s1$status == "done"))
+
+s2 <- mb_extract_medication_batch(mb28_lmdb_r, codes = mb28_codes_r,
+                                  outdir = mb28_dir, resume = TRUE,
+                                  verbose = FALSE)
+ok("second run: both files exist, whole batch skipped",
+   all(s2$status == "skipped"))
+
+unlink(file.path(mb28_dir, "c1.rds"))
+s3 <- mb_extract_medication_batch(mb28_lmdb_r, codes = mb28_codes_r,
+                                  outdir = mb28_dir, resume = TRUE,
+                                  verbose = FALSE)
+ok("third run: one file missing, whole batch reruns (not per-condition)",
+   all(s3$status == "done"))
+
+## 28g. interop: mb_load_conditions()/mb_merge_all() work unchanged on a mix
+##      of mb_extract_medication() and mb_extract_medication_batch() output
+##      in the same outdir
+mb28_dir2 <- file.path(tempdir(), "mb28interop"); unlink(mb28_dir2, recursive = TRUE)
+mb28_codes_i <- data.frame(condition = c("old_fn","new_fn"), vocab_id = "ATC",
+                          code = c("A10","C02"), min_prescriptions = 2,
+                          window_days = 365, stringsAsFactors = FALSE)
+mb28_lmdb_i <- data.frame(
+  pnr = c("p1","p1","p2","p2"),
+  atc = c("A10AB01","A10AB01","C02CA01","C02CA01"),
+  eksd = as.Date(c("2020-01-01","2020-02-01","2020-01-01","2020-02-01")),
+  year = 2020, stringsAsFactors = FALSE)
+mb_extract_medication(mb28_lmdb_i, conditions = "old_fn", codes = mb28_codes_i,
+                      outdir = mb28_dir2, verbose = FALSE)
+mb_extract_medication_batch(mb28_lmdb_i, conditions = "new_fn", codes = mb28_codes_i,
+                            outdir = mb28_dir2, verbose = FALSE)
+mb28_combined <- mb_load_conditions(mb28_dir2)
+ok("mb_load_conditions() reads output from both extraction functions together",
+   setequal(unique(mb28_combined$condition), c("old_fn", "new_fn")))
+
+## 28h. against a real lazy backend - confirms push-down (LAG/OVER/
+##      PARTITION BY), not a silent fallback to collecting everyone first
+if (requireNamespace("DBI", quietly = TRUE) &&
+    requireNamespace("duckdb", quietly = TRUE) &&
+    requireNamespace("dbplyr", quietly = TRUE)) {
+
+  con <- DBI::dbConnect(duckdb::duckdb())
+  DBI::dbWriteTable(con, "mb28_lazy", mb28_lmdb)
+  mb28_lazy_tbl <- dplyr::tbl(con, "mb28_lazy")
+
+  ok("mb_is_lazy() recognises a dbplyr tbl, not a plain data frame",
+     mb_is_lazy(mb28_lazy_tbl) && !mb_is_lazy(mb28_lmdb))
+
+  mb28_batch <- mb_rule_batches(mb_codelist(mb28_codes, vocab = "ATC"),
+                                c("dm", "htn"))[["2|365"]]
+  mb28_q <- mb_batch_query(mb28_lazy_tbl, mb_codelist(mb28_codes, vocab = "ATC"),
+                           mb28_batch, "pnr", "atc", "eksd", "year", 1997,
+                           TRUE, NULL)
+  mb28_sql <- toupper(as.character(dbplyr::remote_query(mb28_q)))
+  ok("batch query pushes down: LAG/OVER/PARTITION BY all in the generated SQL",
+     grepl("LAG(", mb28_sql, fixed = TRUE) &&
+       grepl("OVER (", mb28_sql, fixed = TRUE) &&
+       grepl("PARTITION BY", mb28_sql, fixed = TRUE))
+
+  mb28_lazy_res <- mb_extract_medication_batch(mb28_lazy_tbl, codes = mb28_codes,
+                                               outdir = NULL, verbose = FALSE)
+  for (cond in c("dm", "htn", "pain")) {
+    a <- mb28_lazy_res[[cond]][order(mb28_lazy_res[[cond]]$pnr), ]
+    b <- mb28_new[[cond]][order(mb28_new[[cond]]$pnr), ]
+    ok(paste(cond, "- lazy DuckDB backend agrees with the local data.frame path"),
+       setequal(a$pnr, b$pnr) && isTRUE(all.equal(a$onset_date, b$onset_date)))
+  }
+
+  DBI::dbDisconnect(con, shutdown = TRUE)
+} else {
+  cat("  SKIP   duckdb/dbplyr not installed - lazy-backend check skipped\n")
+}
+
+cat("\nDone.\n")

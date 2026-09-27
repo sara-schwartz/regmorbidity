@@ -6,7 +6,7 @@
 \usage{
 mb_inspect_codes(
   lmdb,
-  cols = c("ATC", "atc2"),
+  cols = c("atc", "atc2"),
   n_sample = MB_INSPECT_SAMPLE_ROWS
 )
 }

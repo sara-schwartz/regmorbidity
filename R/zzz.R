@@ -20,5 +20,6 @@ utils::globalVariables(c(
   # column names used inside data.table expressions (extract.R)
   "id", "date", "code", "mb_ok", ".N",
   # bare column names accepted as defaults by mb_flag_users() (extract.R)
-  "ATC", "PNR", "EKSD"
+  # and mb_prevalence() (prevalence.R)
+  "atc", "pnr", "eksd"
 ))

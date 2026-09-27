@@ -6,11 +6,11 @@
 \usage{
 mb_flag_users(
   data,
-  code_col = ATC,
+  code_col = atc,
   min_prescriptions = 2L,
   window_days = NA,
-  id_col = PNR,
-  date_col = EKSD,
+  id_col = pnr,
+  date_col = eksd,
   dedupe_same_day = TRUE,
   keep_all = FALSE
 )

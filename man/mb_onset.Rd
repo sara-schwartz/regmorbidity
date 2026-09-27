@@ -4,7 +4,15 @@
 \alias{mb_onset}
 \title{Onset date under the "n dispensings within a window" rule}
 \usage{
-mb_onset(dt, min_prescriptions, window_days, keep_all = FALSE)
+mb_onset(dt, min_prescriptions, window_days, keep_all = FALSE, latest = FALSE)
+}
+\arguments{
+\item{latest}{Report the LAST qualifying run instead of the first. Used by
+\code{mb_prevalence()} only: extraction always wants the true, first-ever
+onset, but a windowed prevalence check wants the most recent evidence,
+not whichever qualifying run happens to be earliest in a widened
+candidate set. Does not change what counts as qualifying, only which
+qualifying run is reported when there is more than one.}
 }
 \description{
 Onset is the date of the n-th dispensing in the first run of n that falls

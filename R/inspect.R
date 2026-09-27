@@ -47,7 +47,7 @@ MB_SHORT_COLUMN_NCHAR <- 3L
 #'   printed, with example values.
 #' @export
 mb_inspect_codes <- function(lmdb,
-                             cols = c("ATC", "atc2"),
+                             cols = c("atc", "atc2"),
                              n_sample = MB_INSPECT_SAMPLE_ROWS) {
 
   cols <- cols[vapply(cols, function(cc) mb_has_col(lmdb, cc), logical(1))]
@@ -117,7 +117,7 @@ mb_inspect_codes <- function(lmdb,
 #' @return A data frame with one row per code and the number of dispensings it
 #'   matches.
 #' @export
-mb_check_codes <- function(lmdb, codes = mb_codelist(), code_col = "ATC",
+mb_check_codes <- function(lmdb, codes = mb_codelist(), code_col = "atc",
                            conditions = NULL) {
 
   codes <- mb_codelist(codes, vocab = "ATC", validate = FALSE)

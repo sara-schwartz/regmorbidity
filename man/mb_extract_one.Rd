@@ -17,7 +17,8 @@ mb_extract_one(
   year_min,
   dedupe_same_day,
   keep_all_users,
-  keep_dispensings = FALSE
+  keep_dispensings = FALSE,
+  ids = NULL
 )
 }
 \description{

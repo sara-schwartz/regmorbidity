@@ -7,7 +7,7 @@
 mb_check_codes(
   lmdb,
   codes = mb_codelist(),
-  code_col = "ATC",
+  code_col = "atc",
   conditions = NULL
 )
 }

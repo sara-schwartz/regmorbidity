@@ -54,7 +54,7 @@
 #'   met the rule". With de-duplication on, both count days rather than rows.
 #' @export
 mb_merge_conditions <- function(diagnosis, medication, logic = "OR",
-                                id_col = "PNR", condition = NULL) {
+                                id_col = "pnr", condition = NULL) {
 
   logic <- toupper(logic)
   if (!logic %in% c("OR", "AND")) {
@@ -193,7 +193,7 @@ mb_condition_logic <- function(codes, condition) {
 #' @export
 mb_merge_all <- function(diagnosis_dir = NULL, medication_dir = NULL,
                          codes = mb_codelist(), conditions = NULL,
-                         id_col = "PNR", verbose = TRUE) {
+                         id_col = "pnr", verbose = TRUE) {
 
   if (is.null(diagnosis_dir) && is.null(medication_dir)) {
     stop("Give at least one of diagnosis_dir and medication_dir.", call. = FALSE)

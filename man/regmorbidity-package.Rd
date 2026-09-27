@@ -62,6 +62,8 @@ OR or AND}
 \item{\code{\link[=mb_load_conditions]{mb_load_conditions()}}}{read the per-condition files back}
 \item{\code{\link[=mb_to_wide]{mb_to_wide()}}}{one column per condition}
 \item{\code{\link[=mb_count_conditions]{mb_count_conditions()}}}{\code{n_conditions} and \code{multimorbid}}
+\item{\code{\link[=mb_prevalence]{mb_prevalence()}}}{condition status at a point in time, with a
+lookback window, rather than ever-after-onset}
 }
 }
 

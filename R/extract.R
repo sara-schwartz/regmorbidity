@@ -100,16 +100,18 @@
 #'   `n_records`, `first_date`, `last_date`.
 #' @export
 mb_flag_users <- function(data,
-                       code_col          = ATC,
+                       code_col          = atc,
                        min_prescriptions = 2L,
                        window_days       = NA,
-                       id_col            = PNR,
-                       date_col          = EKSD,
+                       id_col            = pnr,
+                       date_col          = eksd,
                        dedupe_same_day   = TRUE,
                        keep_all          = FALSE) {
 
-  # ensym() accepts both `ATC` and `"ATC"`, so existing calls in
-  # dgt_medication.R work without being rewritten.
+  # ensym() accepts both a bare column name and a string, so an explicit call
+  # naming the actual column - e.g. flag_users(aht_filtered, ATC, ...) from
+  # dgt_medication.R, whatever case that column happens to be - still works
+  # unchanged; only the DEFAULT below is lowercase.
   code_col <- rlang::as_name(rlang::ensym(code_col))
   id_col   <- rlang::as_name(rlang::ensym(id_col))
   date_col <- rlang::as_name(rlang::ensym(date_col))
@@ -128,7 +130,8 @@ mb_flag_users <- function(data,
 #' everything the function actually does happens here.
 #' @keywords internal
 mb_flag_users_impl <- function(data, code_col, min_prescriptions, window_days,
-                          id_col, date_col, dedupe_same_day, keep_all) {
+                          id_col, date_col, dedupe_same_day, keep_all,
+                          latest = FALSE) {
 
   for (nm in c(id_col, code_col, date_col)) {
     if (!nm %in% names(data)) {
@@ -166,7 +169,8 @@ mb_flag_users_impl <- function(data, code_col, min_prescriptions, window_days,
   users <- mb_onset(dispensings,
                     min_prescriptions = min_prescriptions,
                     window_days       = window_days,
-                    keep_all          = keep_all)
+                    keep_all          = keep_all,
+                    latest            = latest)
 
   data.table::setnames(users, "id", id_col)
   as.data.frame(users, stringsAsFactors = FALSE)
@@ -186,8 +190,16 @@ mb_flag_users_impl <- function(data, code_col, min_prescriptions, window_days,
 #' equal length overlap exactly when their start dates are less than that length
 #' apart, so "2 whose intervals overlap" and "2 within 365 days" are the same
 #' rule.
+#'
+#' @param latest Report the LAST qualifying run instead of the first. Used by
+#'   `mb_prevalence()` only: extraction always wants the true, first-ever
+#'   onset, but a windowed prevalence check wants the most recent evidence,
+#'   not whichever qualifying run happens to be earliest in a widened
+#'   candidate set. Does not change what counts as qualifying, only which
+#'   qualifying run is reported when there is more than one.
 #' @keywords internal
-mb_onset <- function(dt, min_prescriptions, window_days, keep_all = FALSE) {
+mb_onset <- function(dt, min_prescriptions, window_days, keep_all = FALSE,
+                     latest = FALSE) {
 
   n <- as.integer(min_prescriptions)
   if (is.na(n) || n < 1L) n <- 1L
@@ -222,9 +234,12 @@ mb_onset <- function(dt, min_prescriptions, window_days, keep_all = FALSE) {
   qualifying <- dt[dt$mb_ok, ]
   if (nrow(qualifying)) {
     # Rows are already in date order, so the first qualifying row per person is
-    # the earliest date the rule was met.
-    onset <- qualifying[, list(onset_date = date[1L],
-                               onset_code = code[1L]), by = "id"]
+    # the earliest date the rule was met, and the last is the most recent.
+    # length(x), not .N: .N is only meaningful written directly in a
+    # data.table j-expression, not inside a helper function called from one.
+    pick <- if (latest) function(x) x[length(x)] else function(x) x[1L]
+    onset <- qualifying[, list(onset_date = pick(date),
+                               onset_code = pick(code)), by = "id"]
     users <- merge(counts, onset, by = "id", all.x = TRUE)
   } else {
     users <- counts
@@ -266,6 +281,11 @@ mb_onset <- function(dt, min_prescriptions, window_days, keep_all = FALSE) {
 #' @param save_dispensings Also write `<condition>_dispensings.rds`, the matched
 #'   records before the prescription rule is applied - the equivalent of the
 #'   `*_filtered.rds` files in `dgt_medication.R`. Large.
+#' @param ids Restrict to these person ids before anything else runs, via a
+#'   join rather than a literal list - see [mb_restrict_ids()]. `NULL`
+#'   (default) keeps everyone. Use this when the run is for a defined study
+#'   cohort rather than the whole register; it is a second, independent lever
+#'   on memory use alongside `prefilter_col`.
 #' @param verbose Print progress.
 #' @return With `outdir`: a summary data frame, invisibly. Without: a named list
 #'   of per-condition data frames, with the summary attached as an attribute.
@@ -277,9 +297,9 @@ mb_extract_medication <- function(lmdb,
                                codes            = mb_codelist(),
                                outdir           = NULL,
                                resume           = TRUE,
-                               id_col           = "PNR",
-                               code_col         = "ATC",
-                               date_col         = "EKSD",
+                               id_col           = "pnr",
+                               code_col         = "atc",
+                               date_col         = "eksd",
                                prefilter_col    = "atc2",
                                prefilter_len    = 3L,
                                year_col         = "year",
@@ -287,6 +307,7 @@ mb_extract_medication <- function(lmdb,
                                dedupe_same_day  = TRUE,
                                keep_all_users   = FALSE,
                                save_dispensings = FALSE,
+                               ids              = NULL,
                                verbose          = TRUE) {
 
   if (!requireNamespace("dplyr", quietly = TRUE)) {
@@ -358,7 +379,7 @@ mb_extract_medication <- function(lmdb,
         prefilter_col = prefilter_col, prefilter_len = prefilter_len,
         year_col = year_col, year_min = year_min,
         dedupe_same_day = dedupe_same_day, keep_all_users = keep_all_users,
-        keep_dispensings = save_dispensings
+        keep_dispensings = save_dispensings, ids = ids
       )
     }
   )
@@ -374,7 +395,7 @@ mb_extract_one <- function(lmdb, condition, codes,
                            prefilter_col, prefilter_len,
                            year_col, year_min,
                            dedupe_same_day, keep_all_users,
-                           keep_dispensings = FALSE) {
+                           keep_dispensings = FALSE, ids = NULL) {
 
   rules         <- codes[codes$condition == condition, , drop = FALSE]
   include_codes <- unique(rules$code[!rules$exclude])
@@ -394,7 +415,7 @@ mb_extract_one <- function(lmdb, condition, codes,
   use_prefilter <- !is.null(prefilter_col) &&
                    all(nchar(include_codes) >= prefilter_len)
 
-  query <- lmdb
+  query <- mb_restrict_ids(lmdb, id_col, ids)
 
   if (!is.null(year_min)) {
     if (!mb_has_col(lmdb, year_col)) {
@@ -478,6 +499,28 @@ mb_extract_one <- function(lmdb, condition, codes,
 mb_pattern <- function(codes) {
   codes <- unique(codes[!is.na(codes) & nzchar(codes)])
   paste0("^(", paste(codes, collapse = "|"), ")")
+}
+
+
+#' Restrict a query to a set of person ids, before anything else runs
+#'
+#' semi_join() rather than filter(id_col %in% ids): a large `ids` vector
+#' passed as a literal IN-list can translate badly or not at all on some lazy
+#' backends, where a JOIN against a copied-in table is the documented,
+#' reliable way to filter by a large local vector. copy = TRUE lets this work
+#' whether `query` is local or remote - dplyr copies `ids` across only when it
+#' needs to, and does nothing extra for a plain data frame.
+#'
+#' Filtering by a known cohort BEFORE the code filter, rather than after, is
+#' the pattern used by other DST projects reading the same registers (see
+#' DECISIONS.md 7.5): it is a second, independent lever on the RAM problem,
+#' unrelated to whether a rule's window function pushes down.
+#' @keywords internal
+mb_restrict_ids <- function(query, id_col, ids) {
+  if (is.null(ids)) return(query)
+  id_tbl <- data.frame(unique(ids), stringsAsFactors = FALSE)
+  names(id_tbl) <- id_col
+  dplyr::semi_join(query, id_tbl, by = id_col, copy = TRUE)
 }
 
 

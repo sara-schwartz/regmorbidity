@@ -10,9 +10,9 @@ mb_extract_medication(
   codes = mb_codelist(),
   outdir = NULL,
   resume = TRUE,
-  id_col = "PNR",
-  code_col = "ATC",
-  date_col = "EKSD",
+  id_col = "pnr",
+  code_col = "atc",
+  date_col = "eksd",
   prefilter_col = "atc2",
   prefilter_len = 3L,
   year_col = "year",
@@ -20,6 +20,7 @@ mb_extract_medication(
   dedupe_same_day = TRUE,
   keep_all_users = FALSE,
   save_dispensings = FALSE,
+  ids = NULL,
   verbose = TRUE
 )
 }
@@ -56,6 +57,12 @@ no year column.}
 \item{save_dispensings}{Also write \verb{<condition>_dispensings.rds}, the matched
 records before the prescription rule is applied - the equivalent of the
 \verb{*_filtered.rds} files in \code{dgt_medication.R}. Large.}
+
+\item{ids}{Restrict to these person ids before anything else runs, via a
+join rather than a literal list - see \code{\link[=mb_restrict_ids]{mb_restrict_ids()}}. \code{NULL}
+(default) keeps everyone. Use this when the run is for a defined study
+cohort rather than the whole register; it is a second, independent lever
+on memory use alongside \code{prefilter_col}.}
 
 \item{verbose}{Print progress.}
 }

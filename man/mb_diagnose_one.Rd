@@ -14,7 +14,8 @@ mb_diagnose_one(
   year_col,
   year_min,
   dedupe_same_day = TRUE,
-  keep_records = FALSE
+  keep_records = FALSE,
+  ids = NULL
 )
 }
 \description{

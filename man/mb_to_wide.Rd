@@ -4,7 +4,7 @@
 \alias{mb_to_wide}
 \title{Turn the long result into one column per condition}
 \usage{
-mb_to_wide(long, id_col = "PNR", value = "onset_date")
+mb_to_wide(long, id_col = "pnr", value = "onset_date")
 }
 \arguments{
 \item{long}{Output of \code{\link[=mb_load_conditions]{mb_load_conditions()}}.}

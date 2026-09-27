@@ -8,7 +8,7 @@ mb_merge_conditions(
   diagnosis,
   medication,
   logic = "OR",
-  id_col = "PNR",
+  id_col = "pnr",
   condition = NULL
 )
 }
