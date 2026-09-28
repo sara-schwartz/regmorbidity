@@ -7,9 +7,9 @@
 mb_condition_files(dir, full.names = TRUE)
 }
 \description{
-\code{save_dispensings} and \code{keep_records} write \verb{<condition>_dispensings.rds} and
-\verb{<condition>_records.rds} alongside the results. Those are raw records with a
-different shape, so reading them back as conditions fails - which it did,
-until this was factored out and used by both readers.
+\code{keep_events} writes \verb{<condition>_all_events.rds} alongside the results.
+Those are raw records with a different shape, so reading them back as
+conditions fails - which it did, until this was factored out and used by
+both readers.
 }
 \keyword{internal}

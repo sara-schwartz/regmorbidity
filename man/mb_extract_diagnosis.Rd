@@ -13,10 +13,10 @@ mb_extract_diagnosis(
   id_col = "pnr",
   code_col = "C_DIAG",
   date_col = "D_INDDTO",
-  year_col = "year",
-  year_min = NULL,
+  from = NULL,
+  to = NULL,
   dedupe_same_day = TRUE,
-  keep_records = FALSE,
+  keep_events = FALSE,
   ids = NULL,
   verbose = TRUE
 )
@@ -41,16 +41,16 @@ and DST's own field names, kept as-is. \code{id_col} defaults to lowercase
 \code{pnr}, matching this package's own convention rather than her renamed
 \code{PNR} - see DECISIONS.md.}
 
-\item{year_col, year_min}{Optional year restriction. Unlike the medication
-side this defaults to \code{NULL}: Prior applies no year floor to diagnoses, and
-an earlier diagnosis is exactly what a lookback is for.}
+\item{from, to}{Inclusive date window on \code{date_col} (Date or \code{NULL}).
+Defaults (\code{NULL}, \code{NULL}) keep the entire register. Applied early,
+before the code filter. Same contract as \code{\link[=mb_extract_medication]{mb_extract_medication()}}.}
 
 \item{dedupe_same_day}{Count several diagnosis records on one date as one.
 On by default so \code{n_records} means the same thing on both halves - days
 with a record - rather than rows, which would make the two counts
 incomparable. One contact coding both I500 and I509 is one day either way.}
 
-\item{keep_records}{Also write \verb{<condition>_records.rds}, the matched
+\item{keep_events}{Also write \verb{<condition>_all_events.rds}, the matched
 diagnoses before the first-per-person step. Large.}
 
 \item{ids}{Restrict to these person ids before anything else runs, via a

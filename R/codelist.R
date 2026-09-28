@@ -281,7 +281,7 @@ mb_as_logical <- function(v) {
 #' @param codes A code list.
 #' @param quiet Suppress the "looks fine" message.
 #' @return `codes`, invisibly. Stops on any problem found.
-#' @export
+#' @keywords internal
 mb_validate_codelist <- function(codes, quiet = FALSE) {
 
   stopifnot(is.data.frame(codes))

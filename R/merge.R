@@ -160,7 +160,7 @@ mb_empty_merge <- function(id_col) {
 #' @param codes A code list.
 #' @param condition Condition name.
 #' @return `"OR"` or `"AND"`.
-#' @export
+#' @keywords internal
 mb_condition_logic <- function(codes, condition) {
   rows <- codes[codes$condition == condition, , drop = FALSE]
   if (!nrow(rows)) {

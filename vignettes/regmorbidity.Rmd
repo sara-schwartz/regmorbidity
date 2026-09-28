@@ -15,337 +15,206 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(regmorbidity)
 ```
 
-## What this package does, and does not do
+## What this package does
 
 regmorbidity derives **condition indicators with dates** from Danish register
-data - dispensings (LMDB) and hospital diagnoses (LPR) - using editable CSV
-code lists rather than code. It computes no score.
+data - hospital diagnoses (LPR) and dispensings (LMDB) - using editable CSV
+code lists rather than hard-coded rules. It computes no score and is not an
+implementation of any published multimorbidity index.
 
-It is not an implementation of the Danish Multimorbidity Index or of any other
-published index. The bundled code lists take their starting point in Prior et
-al. (2016), and are meant to be revised, not cited as-is.
+The public surface is **13 exported functions**. Prefer the full-list extract
+path below; use a sequential one-condition extract only when the cohort or
+year range is large (see later). Downstream is one path: merge, load, wide,
+count, prevalence.
 
-Everything in this vignette runs on small synthetic data. Nothing in the
-package has been run against real register data - see
-`ASSUMPTIONS_AND_LIMITATIONS.txt` in the source repository before reporting
-any number from a real run.
+Read `ASSUMPTIONS_AND_LIMITATIONS.txt` in the source repository before
+reporting a number from a real run. Output is onset-only by default.
 
-## How this compares to Prior et al. (2016)
+## What you supply
 
-The bundled code lists take their starting point in the multimorbidity
-algorithm published as a web supplement to Prior et al. (2016) - see
-Reference, below. regmorbidity is not an implementation of that algorithm.
-The differences are deliberate, and each is argued in full in `DECISIONS.md`
-in the source repository; this is the short version.
+1. **LPR** as **one** combined table: person id, ICD code, contact date
+   (defaults: `pnr`, `C_DIAG`, `D_INDDTO`). The package does not merge LPR2,
+   LPR3, or psychiatric tables for you.
+2. **LMDB**: person id, **full** ATC, dispensing date (defaults: `pnr`,
+   `atc`, `eksd`). An optional short ATC column (e.g. `atc2`) is used only by
+   the sequential medication extractor as a pushed-down prefilter.
+3. **A code list** via `mb_codelist()` (bundled ATC lists, or your own
+   folder / CSV / data frame).
 
-**The same:**
+Date windows use inclusive `from` / `to` (`Date` or `NULL`). Defaults keep
+the entire register. For LMDB, pass `from = as.Date("1997-01-01")` unless you
+have handled the pre-1997 mother-CPR artifact another way (see
+`DECISIONS.md` in the source repository).
 
-- The starting point for which ATC/ICD-10 codes define each condition.
-- The medication rule's window: 2 dispensings within 365 days (4 for pain).
-  Prior's Stata, his Web Table 1, and the DST codebook all agree on 365 days
-  independently - three sources, not one assumption carried over.
-- Same-day dispensings collapsed to one event before counting, matching
-  Prior's Stata exactly (`bys pid eksd: keep if _n == 1`) - though this one
-  is itself provisional, see "What is still open" below: Jie's own script
-  does not do this, so it is one of two joint decisions still open with her.
-- Anchored prefix matching: the same semantics as
-  `heaven::findCondition(match = 'start')`.
+Optional sanity checks before a long extract:
 
-**Different, on purpose:**
+```{r, eval = FALSE}
+mb_inspect_codes(lpr)           # code column lengths
+mb_check_codes(lpr, codes)      # does every list code match something
+mb_inspect_codes(lmdb)
+mb_check_codes(lmdb, codes)
+```
 
-- **Computes no score.** regmorbidity outputs condition indicators with
-  dates, not a summed or weighted index. Prior himself adjusts for his 39
-  conditions individually rather than summing them, and his own published
-  supplement is titled "Algorithm for Physical and Mental Health
-  Conditions", not a multimorbidity index.
-- **Ever/never by default, not time-varying spells.** Prior's Stata splits
-  follow-up into spells with recovery windows (2 years for most diagnoses,
-  5 for cancer, 1 year for medication); once a condition starts here, it
-  counts from then on. `mb_prevalence()`, described below, is a cheaper
-  point-in-time alternative - still not spells.
-- **Prior's composite exclusion rules are not implemented.** Three rules -
-  dyslipidaemia only if not IHD, hypertension only if not IHD or heart
-  failure, distress only if no other psychiatric diagnosis - reference
-  *other* conditions and need a second pass over the merged table. Without
-  them, several conditions are overcounted relative to a published number -
-  the largest single source of divergence, and the more consequential of
-  the two decisions still open with Jie.
-- **Connective tissue uses D86 (sarcoidosis), not M86.** The one place this
-  package knowingly differs from a direct instruction from Anders Prior:
-  his Stata has `DM86`, the published Web Table 1 gives D86, and the
-  surrounding code block is entirely the ICD-10 "systemic connective tissue
-  disorders" range - a block sarcoidosis fits and osteomyelitis (M86) does
-  not. Treated as a likely typo pending Anders's confirmation.
-- **The ICD-10 half does not exist yet.** All 15 bundled code lists are
-  ATC-only; every condition Prior defines partly or wholly by diagnosis is
-  currently missing or understated, and 22 of his 39 conditions have no ATC
-  side at all and are not in this package yet.
-- **The code lists are meant to be edited, not cited as-is.** Prior's list
-  is a starting point for a study to revise - see "Code lists", below - not
-  a fixed instrument.
+## Happy path
 
-## Code lists
-
-A code list is a data frame - or a folder of one CSV per condition - with one
-row per code:
+Extractors take the **full code list** and write one onset `.rds` per
+condition. Diagnoses first, then medications, then merge.
 
 ```{r}
-codes <- data.frame(
-  condition         = "hypertension",
-  condition_label    = "Hypertension",
-  vocab_id           = "ATC",
-  code               = c("C02", "C03", "C07", "C08", "C09"),
-  exclude            = FALSE,
-  min_prescriptions  = 2,
-  window_days        = 365,
-  stringsAsFactors   = FALSE
+# Tiny synthetic registers for this vignette only
+lpr <- data.frame(
+  pnr      = c("1", "2", "3"),
+  C_DIAG   = c("DI10", "DI10", "DE11"),
+  D_INDDTO = as.Date(c("2008-01-01", "2009-06-01", "2011-01-01")),
+  stringsAsFactors = FALSE
 )
-codes <- mb_codelist(codes)
-```
-
-`mb_codelist()` validates on load and refuses a list that would fail quietly:
-a condition whose rows disagree about the rule, a condition made only of
-exclusions, duplicated codes. `min_prescriptions` and `window_days` describe
-the *condition*, so every row of a condition must agree.
-
-To start from the 15 ATC lists bundled with the package and edit from there:
-
-```{r, eval = FALSE}
-mb_write_codelist(mb_codelist(), "my_codelists")   # one file per condition
-codes <- mb_codelist("my_codelists")               # read them back after editing
-```
-
-Before trusting a code list against a real register, two checks are worth
-running first:
-
-```{r, eval = FALSE}
-mb_inspect_codes(lmdb)          # how long are the code columns, really
-mb_check_codes(lmdb, codes)     # does every code match something at all
-```
-
-The second one is how a true zero is told from a typo or a missing chapter of
-the register.
-
-## Extracting medication conditions
-
-The package needs nothing but an object `dplyr` can `filter()`, `select()`
-and `collect()` on - a lazy arrow/DuckDB table on real data, or a plain data
-frame here:
-
-```{r}
 lmdb <- data.frame(
-  pnr  = c("1", "1", "1", "2"),
-  atc  = c("C09AA01", "C09AA01", "C07AB02", "N02BE01"),
-  atc2 = c("C09", "C09", "C07", "N02"),
-  eksd = as.Date(c("2010-01-01", "2010-02-01", "2015-06-01", "2010-01-01")),
-  year = c(2010, 2010, 2015, 2010),
+  pnr  = c("1", "1", "2", "2", "3"),
+  atc  = c("C09AA02", "C09AA02", "C09AA02", "C09AA02", "A10BA02"),
+  eksd = as.Date(c("2010-01-01", "2010-03-01",
+                   "2011-01-01", "2011-04-01", "2012-01-01")),
   stringsAsFactors = FALSE
 )
 
-mb_extract_medication(lmdb, codes = codes, outdir = NULL, verbose = FALSE)
+codes <- mb_codelist()
 ```
-
-Person `1` has two hypertension dispensings 31 days apart - inside the
-365-day window - so they meet the rule; person `2` has no matching codes at
-all. With `outdir = NULL` the result comes back as a named list, one element
-per condition, instead of being written to disk; **always check
-`attr(result, "summary")$status`**, since a batch that finishes can still
-contain per-condition errors.
-
-For a real run, pass `outdir` so each condition is written to its own `.rds`
-as soon as it is done, which makes an interrupted run resumable:
 
 ```{r, eval = FALSE}
-mb_extract_medication(lmdb, codes = codes, outdir = "data/conditions")
-long <- mb_load_conditions("data/conditions")   # one row per person-condition
-wide <- mb_to_wide(long)                        # one column per condition
+# On real data: write onset files for every condition in the list
+mb_extract_diagnosis(
+  lpr,
+  codes  = codes,
+  outdir = "data/dx",
+  from   = as.Date("1995-01-01")
+)
+
+mb_extract_medication_batch(
+  lmdb,
+  codes  = codes,
+  outdir = "data/rx",
+  from   = as.Date("1997-01-01")
+)
+
+mb_merge_all("data/dx", "data/rx", outdir = "data/conditions")
+long <- mb_load_conditions("data/conditions")
+wide <- mb_to_wide(long)
+mb_count_conditions(wide, as_of = "2015-01-01")
 ```
 
-If the run is for a defined study cohort rather than everyone in the
-register, pass `ids` to restrict before anything else runs:
-
-```{r, eval = FALSE}
-mb_extract_medication(lmdb, codes = codes, outdir = "data/conditions",
-                      ids = cohort$pnr)
-```
-
-This is a join against the lazy connection, not a filter written out as a
-list of ids, so it stays efficient with a large cohort on a large register.
-It is a second, independent way to reduce how much ever needs to come home,
-alongside the code-level filtering the two-stage match already does.
-
-## Ever/never, or a point in time
-
-`mb_count_conditions()` counts a condition from its onset date on: once met,
-always met.
+Worked miniature (in memory, no files):
 
 ```{r}
-long <- mb_extract_medication(lmdb, codes = codes, outdir = NULL,
-                              verbose = FALSE)$hypertension
-wide <- mb_to_wide(long)
-mb_count_conditions(wide, as_of = "2020-01-01")
+dx_codes <- mb_codelist(data.frame(
+  condition = "hypertension", vocab_id = "ICD10", code = "I10",
+  exclude = FALSE, stringsAsFactors = FALSE
+))
+rx_codes <- mb_codelist(data.frame(
+  condition = "hypertension", vocab_id = "ATC", code = "C09",
+  exclude = FALSE, min_prescriptions = 2L, window_days = 365L,
+  stringsAsFactors = FALSE
+))
+
+dx <- mb_extract_diagnosis(lpr, codes = dx_codes, outdir = NULL,
+                           verbose = FALSE)
+rx <- mb_extract_medication_batch(lmdb, codes = rx_codes, outdir = NULL,
+                                  verbose = FALSE)
+
+merged <- mb_merge_conditions(dx$hypertension, rx$hypertension)
+wide <- mb_to_wide(merged)
+mb_count_conditions(wide, as_of = "2015-01-01")
 ```
 
-That is a different, cheaper estimand than a published index's recovery
-windows, and it must be stated wherever a number is reported (see
-`DECISIONS.md` 4.1 in the source repository for the full argument).
+For a study cohort rather than everyone in the register, pass `ids` on the
+extract call. That is a join against the lazy connection, not a written-out
+id list.
 
-If instead you need "is there still evidence of this condition within the
-last N days", `mb_prevalence()` applies the same rule to a record set
-restricted to a lookback window. It needs the raw matching records, not the
-extraction result, because `onset_date` alone cannot answer a lookback
-question - which is why `save_dispensings = TRUE` needs a real `outdir`; with
-`outdir = NULL` the raw records are not kept at all:
+```{r, eval = FALSE}
+mb_extract_medication_batch(lmdb, codes = codes, outdir = "data/rx",
+                            from = as.Date("1997-01-01"),
+                            ids = cohort$pnr)
+```
+
+## Diagnosis and merge
+
+`mb_extract_diagnosis()` needs no prescription rule: one matching diagnosis
+is the condition, and onset is the earliest date. Feed it **one** already-
+combined LPR table.
+
+`"OR"` (default) in merge takes whichever of diagnosis / medication came
+first; `"AND"` requires both and takes the later date. Which applies can
+come from an optional `logic` column in the code list.
+`mb_merge_conditions()` merges one condition; `mb_merge_all()` walks a pair
+of output directories.
+
+## Medication rules in brief
+
+Medication conditions usually need more than one dispensing. The code list
+carries `min_prescriptions` and `window_days` (often 2 within 365 days).
+Same-day dispensings are de-duplicated by default
+(`dedupe_same_day = TRUE`), so two packages on one pharmacy visit count as
+one event. Leaving `window_days` as `NA` means any distance apart.
+
+Three settings that change counts:
+
+- **`from` / `to`** - inclusive window; `NULL` keeps the whole register.
+  Prefer `from = as.Date("1997-01-01")` on LMDB (mother-CPR artifact).
+- **`dedupe_same_day`** - default `TRUE`.
+- **`window_days` / `min_prescriptions`** - from the code list, overridable
+  on the extract call where the API allows.
+
+## Ever/never, or a lookback
+
+`mb_count_conditions()` counts a condition from its onset date on: once met,
+always met (as of the date you pass). State that estimand wherever you
+report a number.
+
+If you need "still evidence within the last N days", use `mb_prevalence()`
+on **raw matching records**, not onset-only `.rds`. That is one reason to
+use the sequential medication extractor with `keep_events = TRUE`, which
+writes `<condition>_all_events.rds` beside the onset file. Batch does not
+collect raw rows. With `outdir = NULL`, side files are not written.
 
 ```{r}
 outdir <- tempfile()
-mb_extract_medication(lmdb, codes = codes, outdir = outdir,
-                      save_dispensings = TRUE, verbose = FALSE)
-disp <- readRDS(file.path(outdir, "hypertension_dispensings.rds"))
+mb_extract_medication(lmdb, codes = rx_codes, outdir = outdir,
+                      keep_events = TRUE, verbose = FALSE)
+disp <- readRDS(file.path(outdir, "hypertension_all_events.rds"))
 
 mb_prevalence(disp, as_of = "2011-01-01", lookback = 365,
              min_prescriptions = 2, window_days = 365)
 ```
 
-`lookback = Inf` reproduces `mb_count_conditions(as_of = )` exactly.
+`lookback = Inf` matches `mb_count_conditions(as_of = )`.
+`mb_load_conditions()` skips `*_all_events.rds` automatically.
 
-## Diagnoses, and combining the two halves
+## One condition at a time
 
-`mb_extract_diagnosis()` is the ICD-10 counterpart. It needs no two-stage
-filter and no prescription rule - one recorded diagnosis is the condition,
-and onset is the earliest one:
+Prefer the full-list path. Switch to sequential when the population or
+year range is so large that a full-list pass is awkward, or when you need
+`keep_events`:
 
-```{r}
-lpr <- data.frame(
-  pnr      = c("1", "3"),
-  C_DIAG   = c("DI10", "DI10"),
-  D_INDDTO = as.Date(c("2008-01-01", "2012-01-01")),
-  stringsAsFactors = FALSE
-)
-dx_codes <- mb_codelist(data.frame(
-  condition = "hypertension", vocab_id = "ICD10", code = "I10",
-  exclude = FALSE, stringsAsFactors = FALSE
-))
+- Diagnoses: `mb_extract_diagnosis()` with a code list filtered to one
+  condition (or run the full list if LPR is manageable).
+- Medications: `mb_extract_medication()` (not batch). Supports
+  `keep_events`; batch does not.
 
-mb_extract_diagnosis(lpr, codes = dx_codes, outdir = NULL, verbose = FALSE)
-```
+Both still write the same onset `.rds` shape, so merge / load / wide /
+count stay unchanged.
 
-Combine both halves with `mb_merge_conditions()` for one condition, or
-`mb_merge_all()` for every condition in a pair of output directories.
-`"OR"` (the default) takes whichever date came first; `"AND"` requires both
-and takes the later - Prior uses `AND` only for epilepsy. Which applies comes
-from an optional `logic` column in the code list.
+## Code-list overlaps
 
-## Checking the code lists themselves
-
-`C02C` (hypertension) and `C02CA` (prostate) is a real overlap in the bundled
-lists - C02CA is a subgroup of C02C, so one dispensing can satisfy both:
-
-```{r}
-ov_codes <- mb_codelist(data.frame(
-  condition = c("hypertension", "prostate"), vocab_id = "ATC",
-  code = c("C02C", "C02CA"), exclude = FALSE, stringsAsFactors = FALSE
-))
-mb_overlap(ov_codes)
-mb_lookup("C02CA01", ov_codes)
-```
-
-`mb_overlap()` is prefix-aware, so a condition whose code merely *contains*
-another's is caught; an overlap is not automatically wrong, but one record
-creating two conditions should be a decision, not a discovery. `mb_lookup()`
-answers the question you want answered when a prevalence looks too high: what
-would this one record be counted as.
-
-`mb_compare()` reports what changed between two versions of a code list,
-normalising both sides first so reordered rows and case differences are not
-reported as changes, while rule changes (a different `window_days`) are
-called out separately because they move everyone's result, not a few
-people's.
-
-## Three things that change your numbers
-
-- **`year_min` defaults to `1997`.** That drops 1995-96 from LMDB on purpose,
-  following the pipeline this package's extraction logic is derived from. Set
-  `year_min = NULL` to keep every year.
-- **Same-day dispensings are de-duplicated by default**, so two packages
-  collected on one pharmacy visit count as one dispensing rather than
-  satisfying a two-prescription rule on their own. `dedupe_same_day = FALSE`
-  turns it off.
-- **`window_days` requires the dispensings to fall within that many days of
-  each other.** Leaving it blank (`NA`) means any distance apart. Read the
-  full argument for the default of 365 days in `DECISIONS.md`.
-
-## What is still open
-
-Two decisions actually block trusting a number from this package - both
-joint calls with Jie, because they move counts away from her existing
-output, not research questions:
-
-- **Same-day de-duplication.** Per person-day (the current default), per
-  person-day-drug, or per row (no de-duplication - Jie's script's current
-  behaviour)? All three are defensible and in use somewhere.
-- **Prior's exclusion rules**, described above. Implement, or omit and say
-  so explicitly in the paper? The rules themselves are no longer in
-  question, transcribed verbatim from the Stata - only whether to apply
-  them.
-
-Also open, each blocked on one person rather than a joint call:
-
-| Question | Blocked on |
-|---|---|
-| Connective tissue - confirm D86 is intended, not a typo for DD86 | Anders |
-| `year_min = 1997` - why, when LMDB itself starts in 1995 | Nikolaj, or DST directly |
-| How subcategories (e.g. depression/anxiety within distress) are represented | Jie |
-| Optional ICD arms for KOL and allergy, alongside the ATC-only default | Jie |
-| Whether a recovery option ships at all, beyond ever/never | the group |
-| LPR2 psychiatric codes - Jie has working code, not yet received | Jie |
-| What the package is FOR - scope, beyond which codes | the group, with Daniel |
-| Where the code lives long-term, and authorship | the group |
-
-This list is current as of the date on this vignette; `DECISIONS.md` and
-`TODO.txt` in the source repository are the up-to-date versions if either has
-moved since.
-
-## Next steps
-
-- **Verify on real register data.** Nothing in this package has touched real
-  DST data yet; everything in this vignette runs on small synthetic
-  examples. The next DST session checks that the code columns are the
-  lengths every list assumes, that every bundled code matches something
-  real, and - the architecture question - whether the window/lag rule
-  behind the prescription count can run inside the database, rather than
-  requiring every matching dispensing to be collected into R first.
-- **Settle the two decisions above with Jie**, then the code lists can be
-  unfrozen for the next round of changes.
-- **Build the ICD-10 half** of the code lists, once condition naming is
-  settled - three incompatible schemes are currently in play across this
-  package, Jie's script, and the DST codebook, and the two halves join on
-  that name, so it needs deciding before anything is written.
-- **Confirm D86 with Anders**, and get Nikolaj's read on `year_min` and the
-  LPR2 join.
+Some bundled ATC ranges nest (e.g. hypertension `C02C` and a prostate
+subgroup). An overlap is not automatically wrong, but one dispensing
+creating two conditions should be a deliberate choice. Helpers that list
+overlaps live inside the namespace (`regmorbidity:::mb_overlap` and related);
+they are not part of the 13-export public surface.
 
 ## Where to read more
 
-The source repository (not always shipped with the installed package) carries
-the fuller documentation, each for a different audience:
+In the source repository (not always shipped with the installed package):
 
-- `DECISIONS.md` - every decision, its sources and what it costs
-- `METHODS.md` - the same content as article-ready prose
-- `ASSUMPTIONS_AND_LIMITATIONS.txt` - the short version, to read before
-  reporting a number
+- `ASSUMPTIONS_AND_LIMITATIONS.txt` - short checklist before reporting a number
+- `DECISIONS.md` - design choices, sources, and costs
+- `METHODS.md` - article-ready prose
+- `TODO.txt` - open work and meeting items (not user-facing API)
 
-## Reference
-
-The bundled code lists take their starting point in the multimorbidity
-algorithm published as a web supplement to:
-
-Prior A, Fenger-Gron M, Larsen KK, Larsen FB, Robinson KM, Nielsen MG,
-Christensen KS, Mercer SW, Vestergaard M. The association between perceived
-stress and mortality among people with multimorbidity: a prospective
-population-based cohort study. *American Journal of Epidemiology*.
-2016;184(3):199-210. doi: 10.1093/aje/kwv324
-
-regmorbidity is not an implementation of the algorithm in that supplement.
-The code lists are a starting point, revised for this package's own use; see
-`DECISIONS.md` and `CODELIST_REVIEW.md` in the source repository for exactly
-where and why they diverge.

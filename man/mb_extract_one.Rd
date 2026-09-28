@@ -13,11 +13,11 @@ mb_extract_one(
   date_col,
   prefilter_col,
   prefilter_len,
-  year_col,
-  year_min,
+  from,
+  to,
   dedupe_same_day,
   keep_all_users,
-  keep_dispensings = FALSE,
+  keep_events = FALSE,
   ids = NULL
 )
 }

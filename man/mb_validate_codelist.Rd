@@ -25,3 +25,4 @@ It does NOT check that the codes are clinically right. Use \code{mb_check_codes(
 against the register for whether a code matches anything at all, and a human
 for whether it should.
 }
+\keyword{internal}

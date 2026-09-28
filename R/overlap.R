@@ -41,7 +41,7 @@
 #' @return A data frame, one row per overlapping pair of codes: `vocab_id`,
 #'   `condition_a`, `code_a`, `condition_b`, `code_b`, `relation`. Empty if the
 #'   conditions are disjoint.
-#' @export
+#' @keywords internal
 mb_overlap <- function(codes = mb_codelist(), vocab = NULL, verbose = TRUE) {
 
   codes <- mb_codelist(codes, vocab = vocab, validate = FALSE)
@@ -123,7 +123,7 @@ mb_overlap <- function(codes = mb_codelist(), vocab = NULL, verbose = TRUE) {
 #' @param codes A code list; see [mb_codelist()].
 #' @return A data frame of the matching rows: `query`, `condition`, `vocab_id`,
 #'   `code`, `exclude`. Empty if the code belongs to nothing.
-#' @export
+#' @keywords internal
 mb_lookup <- function(code, codes = mb_codelist()) {
 
   codes <- mb_codelist(codes, validate = FALSE)

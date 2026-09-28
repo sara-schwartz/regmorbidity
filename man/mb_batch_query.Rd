@@ -11,8 +11,8 @@ mb_batch_query(
   id_col,
   code_col,
   date_col,
-  year_col,
-  year_min,
+  from,
+  to,
   dedupe_same_day,
   ids
 )
@@ -25,10 +25,11 @@ the code that triggered it, NA if the person never qualified) computed
 alongside each other - all inside the one collect() the caller does once.
 }
 \details{
-year_min is applied here, upstream of every branch, before the window
+from/to are applied here, upstream of every branch, before the window
 function runs - not as a filter on the computed onset afterward. A
-pre-cutoff dispensing can be the earlier half of a qualifying pair whose
-LATER half falls after year_min; filtering post hoc would keep that pair
-wrongly (2026-09-26 DST session, the bipolar anomaly - TODO.txt section 5).
+pre-window dispensing can be the earlier half of a qualifying pair whose
+LATER half falls inside the window; filtering post hoc would keep that
+pair wrongly (2026-09-26 DST session, the bipolar anomaly - TODO.txt
+section 5).
 }
 \keyword{internal}

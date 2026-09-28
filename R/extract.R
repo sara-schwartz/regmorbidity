@@ -56,18 +56,17 @@
 # .............................................................................
 # 1. Constants ----
 
-# The defaults for year_min, prefilter_col and prefilter_len are written as
-# literals in the signature rather than as named constants. A named constant
-# would be invisible: it is not exported, so args(mb_extract_medication) and the
-# help page would show a symbol the reader cannot resolve. For a default
-# argument the value IS the documentation, and the reasoning lives in @param.
+# The defaults for prefilter_col and prefilter_len are written as literals in
+# the signature rather than as named constants. A named constant would be
+# invisible: it is not exported, so args(mb_extract_medication) and the help
+# page would show a symbol the reader cannot resolve. For a default argument
+# the value IS the documentation, and the reasoning lives in @param.
 #
-#   year_min = 1997        what dgt_medication.R uses throughout. LMDB starts
-#                          in 1995, so this drops two years on purpose. The
-#                          reason for 1997 is not documented anywhere in that
-#                          script - see TODO.txt section 6.
 #   prefilter_col = "atc2" ATC level 2, exactly 3 characters (C09, A10, N06).
 #   prefilter_len = 3      verify with mb_inspect_codes() on a new extract.
+#   from / to = NULL       no date window by default (entire register). For
+#                          LMDB, pass from = as.Date("1997-01-01") to avoid
+#                          the pre-1997 mother-CPR artifact - see DECISIONS.md.
 # 2. Flagging users of one medication ----
 
 #' Flag people who meet a medication criterion
@@ -98,7 +97,7 @@
 #'   the rule excluded.
 #' @return One row per person: id, `onset_date`, `onset_code`,
 #'   `n_records`, `first_date`, `last_date`.
-#' @export
+#' @keywords internal
 mb_flag_users <- function(data,
                        code_col          = atc,
                        min_prescriptions = 2L,
@@ -273,12 +272,15 @@ mb_onset <- function(dt, min_prescriptions, window_days, keep_all = FALSE,
 #'   or `NULL` to filter on `code_col` directly.
 #' @param prefilter_len Characters held by `prefilter_col`. Check with
 #'   [mb_inspect_codes()] before trusting it.
-#' @param year_col,year_min Restrict to dispensings from this year onward.
-#'   Defaults to 1997, as `dgt_medication.R` uses throughout, which deliberately
-#'   drops 1995-96. Set `year_min = NULL` to keep every year, or if the data has
-#'   no year column.
+#' @param from,to Inclusive date window on `date_col` (Date or `NULL`).
+#'   Defaults (`NULL`, `NULL`) keep the entire register. Applied early, before
+#'   the code filter and the prescription rule, so a dispensing outside the
+#'   window cannot anchor a qualifying pair. For LMDB, pass
+#'   `from = as.Date("1997-01-01")` to avoid the pre-1997 mother-CPR artifact
+#'   (children's prescriptions recorded under the mother's CPR until 1996;
+#'   see DECISIONS.md and ASSUMPTIONS_AND_LIMITATIONS.txt).
 #' @param dedupe_same_day,keep_all_users Passed to [mb_flag_users()].
-#' @param save_dispensings Also write `<condition>_dispensings.rds`, the matched
+#' @param keep_events Also write `<condition>_all_events.rds`, the matched
 #'   records before the prescription rule is applied - the equivalent of the
 #'   `*_filtered.rds` files in `dgt_medication.R`. Large.
 #' @param ids Restrict to these person ids before anything else runs, via a
@@ -302,11 +304,11 @@ mb_extract_medication <- function(lmdb,
                                date_col         = "eksd",
                                prefilter_col    = "atc2",
                                prefilter_len    = 3L,
-                               year_col         = "year",
-                               year_min         = 1997,
+                               from             = NULL,
+                               to               = NULL,
                                dedupe_same_day  = TRUE,
                                keep_all_users   = FALSE,
-                               save_dispensings = FALSE,
+                               keep_events = FALSE,
                                ids              = NULL,
                                verbose          = TRUE) {
 
@@ -345,12 +347,10 @@ mb_extract_medication <- function(lmdb,
              call. = FALSE)
       }
     }
-    if (!is.null(year_min) && !year_col %in% available_cols) {
-      stop("year_min = ", year_min, " but there is no '", year_col,
-           "' column. Pass year_col = <name>, or year_min = NULL to keep ",
-           "every year.", call. = FALSE)
-    }
   }
+
+  from <- mb_as_bound(from, "from")
+  to   <- mb_as_bound(to,   "to")
 
   if (!is.null(outdir) && !dir.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
@@ -377,9 +377,9 @@ mb_extract_medication <- function(lmdb,
         lmdb = lmdb, condition = condition, codes = codes,
         id_col = id_col, code_col = code_col, date_col = date_col,
         prefilter_col = prefilter_col, prefilter_len = prefilter_len,
-        year_col = year_col, year_min = year_min,
+        from = from, to = to,
         dedupe_same_day = dedupe_same_day, keep_all_users = keep_all_users,
-        keep_dispensings = save_dispensings, ids = ids
+        keep_events = keep_events, ids = ids
       )
     }
   )
@@ -393,9 +393,9 @@ mb_extract_medication <- function(lmdb,
 mb_extract_one <- function(lmdb, condition, codes,
                            id_col, code_col, date_col,
                            prefilter_col, prefilter_len,
-                           year_col, year_min,
+                           from, to,
                            dedupe_same_day, keep_all_users,
-                           keep_dispensings = FALSE, ids = NULL) {
+                           keep_events = FALSE, ids = NULL) {
 
   rules         <- codes[codes$condition == condition, , drop = FALSE]
   include_codes <- unique(rules$code[!rules$exclude])
@@ -416,15 +416,7 @@ mb_extract_one <- function(lmdb, condition, codes,
                    all(nchar(include_codes) >= prefilter_len)
 
   query <- mb_restrict_ids(lmdb, id_col, ids)
-
-  if (!is.null(year_min)) {
-    if (!mb_has_col(lmdb, year_col)) {
-      stop("year_min = ", year_min, " but there is no '", year_col,
-           "' column. Pass year_col = <name>, or year_min = NULL to keep ",
-           "every year.", call. = FALSE)
-    }
-    query <- dplyr::filter(query, .data[[year_col]] >= !!year_min)
-  }
+  query <- mb_restrict_dates(query, date_col, from, to)
 
   if (use_prefilter) {
     stage1_pattern <- mb_pattern(substr(include_codes, 1L, prefilter_len))
@@ -476,8 +468,8 @@ mb_extract_one <- function(lmdb, condition, codes,
                      "n_records", "first_date", "last_date")]
 
   list(data              = users,
-       extra             = list("_dispensings" =
-                                 if (keep_dispensings) dispensings else NULL),
+       extra             = list("_all_events" =
+                                 if (keep_events) dispensings else NULL),
        n_codes           = length(include_codes),
        pattern           = stage2_pattern,
        n_rows            = n_rows,
@@ -521,6 +513,42 @@ mb_restrict_ids <- function(query, id_col, ids) {
   id_tbl <- data.frame(unique(ids), stringsAsFactors = FALSE)
   names(id_tbl) <- id_col
   dplyr::semi_join(query, id_tbl, by = id_col, copy = TRUE)
+}
+
+
+#' Restrict a query to an inclusive date window on date_col
+#'
+#' Applied early - before the code filter and before any window-function
+#' prescription rule - so a dispensing outside the window cannot act as the
+#' earlier half of a qualifying pair whose later half falls inside it (the
+#' bipolar anomaly; see DECISIONS.md). Inclusive: date >= from and date <= to
+#' when each bound is non-NULL. NULL means no bound (entire register).
+#' @keywords internal
+mb_restrict_dates <- function(query, date_col, from = NULL, to = NULL) {
+  if (!is.null(from)) {
+    query <- dplyr::filter(query, .data[[date_col]] >= !!from)
+  }
+  if (!is.null(to)) {
+    query <- dplyr::filter(query, .data[[date_col]] <= !!to)
+  }
+  query
+}
+
+
+#' Coerce a from/to argument to a length-1 Date, or leave NULL alone
+#' @keywords internal
+mb_as_bound <- function(x, label = "date") {
+  if (is.null(x)) return(NULL)
+  if (length(x) != 1L) {
+    stop("'", label, "' must be a single Date or NULL.", call. = FALSE)
+  }
+  if (inherits(x, "Date")) return(x)
+  if (inherits(x, "POSIXt")) return(as.Date(x))
+  out <- suppressWarnings(as.Date(x))
+  if (length(out) != 1L || is.na(out)) {
+    stop("'", label, "' must be a Date or NULL.", call. = FALSE)
+  }
+  out
 }
 
 

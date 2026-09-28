@@ -47,7 +47,7 @@ MB_LABEL_FIELDS <- c("condition_label", "category")
 #' @param verbose Print a summary.
 #' @return A data frame with one row per change: `condition`, `vocab_id`,
 #'   `change`, `item`, `old`, `new`. Zero rows means the two are equivalent.
-#' @export
+#' @keywords internal
 mb_compare <- function(old, new, include_labels = FALSE, verbose = TRUE) {
 
   old <- mb_codelist(old, validate = FALSE)

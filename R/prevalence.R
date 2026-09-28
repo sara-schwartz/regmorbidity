@@ -8,8 +8,8 @@
 #   close enough to T, using the SAME rule extraction already applies, re-run
 #   against a record set restricted to a lookback window.
 #
-# INPUT   one condition's raw records - mb_extract_medication(save_dispensings=)
-#         or mb_extract_diagnosis(keep_records=) - one row per matching record
+# INPUT   one condition's raw records - mb_extract_medication(keep_events=)
+#         or mb_extract_diagnosis(keep_events=) - one row per matching record
 # OUTPUT  one row per person prevalent at `as_of` under `lookback`
 #
 # WHY THIS DOES NOT DUPLICATE THE WINDOW RULE
@@ -69,9 +69,9 @@
 #' section 7 for what this does and does not fix.
 #'
 #' @param data One condition's raw matching records - what
-#'   `mb_extract_medication(save_dispensings = TRUE)` or
-#'   `mb_extract_diagnosis(keep_records = TRUE)` write to
-#'   `<condition>_dispensings.rds` / `<condition>_records.rds`. Not the
+#'   `mb_extract_medication(keep_events = TRUE)` or
+#'   `mb_extract_diagnosis(keep_events = TRUE)` write to
+#'   `<condition>_all_events.rds`. Not the
 #'   extraction result itself, which has already applied the rule and
 #'   discarded the records.
 #' @param as_of Single date. The index date to evaluate prevalence at.
@@ -192,10 +192,9 @@ mb_lookback_days <- function(x) {
 #' wherever - the code lists are frozen, so this stays a separate argument
 #' rather than a code list column; see DECISIONS.md 4.1).
 #'
-#' @param dir Directory holding `<condition>_dispensings.rds` (written by
-#'   `mb_extract_medication(save_dispensings = TRUE)`) and/or
-#'   `<condition>_records.rds` (written by
-#'   `mb_extract_diagnosis(keep_records = TRUE)`) - the raw records
+#' @param dir Directory holding `<condition>_all_events.rds` (written by
+#'   `mb_extract_medication(keep_events = TRUE)` or
+#'   `mb_extract_diagnosis(keep_events = TRUE)`) - the raw records
 #'   `mb_prevalence()` needs, not the extraction result itself.
 #' @param as_of Single date, the index date - the same for every condition.
 #' @param lookback A single value (number of days, a word - `"ever"` /
@@ -215,7 +214,7 @@ mb_lookback_days <- function(x) {
 #' @return One combined data frame, one row per person-condition prevalent
 #'   at `as_of`, `condition` column added - the same columns
 #'   [mb_prevalence()] returns for one condition.
-#' @export
+#' @keywords internal
 mb_prevalence_all <- function(dir, as_of, lookback = Inf,
                               codes           = mb_codelist(),
                               conditions      = NULL,
@@ -233,14 +232,14 @@ mb_prevalence_all <- function(dir, as_of, lookback = Inf,
 
   # Raw-records files, not extraction results - the opposite exclusion to
   # mb_condition_files(), which is for the results and skips these.
-  files <- list.files(dir, pattern = "_(dispensings|records)\\.rds$")
-  file_condition <- sub("_(dispensings|records)\\.rds$", "", files)
+  files <- list.files(dir, pattern = "_all_events\\.rds$")
+  file_condition <- sub("_all_events\\.rds$", "", files)
 
   if (!is.null(conditions)) {
     missing_files <- setdiff(conditions, file_condition)
     if (length(missing_files)) {
       stop("No raw-records file for: ", paste(missing_files, collapse = ", "),
-           "\n(Looked for <condition>_dispensings.rds / _records.rds in ",
+           "\n(Looked for <condition>_all_events.rds in ",
            dir, ")", call. = FALSE)
     }
     keep <- file_condition %in% conditions
@@ -248,7 +247,7 @@ mb_prevalence_all <- function(dir, as_of, lookback = Inf,
     file_condition <- file_condition[keep]
   }
   if (!length(files)) {
-    stop("No <condition>_dispensings.rds / _records.rds files in ", dir,
+    stop("No <condition>_all_events.rds files in ", dir,
          call. = FALSE)
   }
 

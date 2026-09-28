@@ -53,3 +53,4 @@ first two arguments, so \code{flag_users(aht_filtered, ATC, min_prescriptions = 
 still works unchanged. It adds \code{window_days} and same-day de-duplication,
 both of which come from the Stata original.
 }
+\keyword{internal}

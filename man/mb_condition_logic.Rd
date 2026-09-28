@@ -19,3 +19,4 @@ Read from an optional \code{logic} column in the code list, defaulting to \code{
 Keeping it in the code list means the one condition that behaves differently
 says so in its own file, rather than in a special case in the code.
 }
+\keyword{internal}

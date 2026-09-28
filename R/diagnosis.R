@@ -46,7 +46,7 @@
 #'
 #' @param x Character vector of ICD-10 codes, in either convention.
 #' @return The same codes in WHO form, upper-cased and stripped of whitespace.
-#' @export
+#' @keywords internal
 mb_normalize_icd10 <- function(x) {
   x <- toupper(gsub("[[:space:].]", "", as.character(x)))
   danish <- grepl("^D[A-Z]", x)
@@ -77,14 +77,14 @@ mb_normalize_icd10 <- function(x) {
 #'   and DST's own field names, kept as-is. `id_col` defaults to lowercase
 #'   `pnr`, matching this package's own convention rather than her renamed
 #'   `PNR` - see DECISIONS.md.
-#' @param year_col,year_min Optional year restriction. Unlike the medication
-#'   side this defaults to `NULL`: Prior applies no year floor to diagnoses, and
-#'   an earlier diagnosis is exactly what a lookback is for.
+#' @param from,to Inclusive date window on `date_col` (Date or `NULL`).
+#'   Defaults (`NULL`, `NULL`) keep the entire register. Applied early,
+#'   before the code filter. Same contract as [mb_extract_medication()].
 #' @param dedupe_same_day Count several diagnosis records on one date as one.
 #'   On by default so `n_records` means the same thing on both halves - days
 #'   with a record - rather than rows, which would make the two counts
 #'   incomparable. One contact coding both I500 and I509 is one day either way.
-#' @param keep_records Also write `<condition>_records.rds`, the matched
+#' @param keep_events Also write `<condition>_all_events.rds`, the matched
 #'   diagnoses before the first-per-person step. Large.
 #' @param ids Restrict to these person ids before anything else runs, via a
 #'   join rather than a literal list - see [mb_restrict_ids()]. `NULL`
@@ -102,10 +102,10 @@ mb_extract_diagnosis <- function(lpr,
                               id_col       = "pnr",
                               code_col     = "C_DIAG",
                               date_col     = "D_INDDTO",
-                              year_col     = "year",
-                              year_min     = NULL,
+                              from         = NULL,
+                              to           = NULL,
                               dedupe_same_day = TRUE,
-                              keep_records = FALSE,
+                              keep_events = FALSE,
                               ids          = NULL,
                               verbose      = TRUE) {
 
@@ -139,11 +139,10 @@ mb_extract_diagnosis <- function(lpr,
              call. = FALSE)
       }
     }
-    if (!is.null(year_min) && !year_col %in% available_cols) {
-      stop("year_min = ", year_min, " but there is no '", year_col,
-           "' column.", call. = FALSE)
-    }
   }
+
+  from <- mb_as_bound(from, "from")
+  to   <- mb_as_bound(to,   "to")
 
   if (!is.null(outdir) && !dir.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
@@ -159,8 +158,8 @@ mb_extract_diagnosis <- function(lpr,
       mb_diagnose_one(
         lpr = lpr, condition = condition, codes = codes,
         id_col = id_col, code_col = code_col, date_col = date_col,
-        year_col = year_col, year_min = year_min,
-        dedupe_same_day = dedupe_same_day, keep_records = keep_records,
+        from = from, to = to,
+        dedupe_same_day = dedupe_same_day, keep_events = keep_events,
         ids = ids
       )
     }
@@ -174,8 +173,8 @@ mb_extract_diagnosis <- function(lpr,
 #' @keywords internal
 mb_diagnose_one <- function(lpr, condition, codes,
                             id_col, code_col, date_col,
-                            year_col, year_min, dedupe_same_day = TRUE,
-                            keep_records = FALSE, ids = NULL) {
+                            from, to, dedupe_same_day = TRUE,
+                            keep_events = FALSE, ids = NULL) {
 
   rules         <- codes[codes$condition == condition, , drop = FALSE]
   include_codes <- mb_normalize_icd10(unique(rules$code[!rules$exclude]))
@@ -191,9 +190,7 @@ mb_diagnose_one <- function(lpr, condition, codes,
   # Danish D. Matching "D?" plus the WHO pattern lets the database do the work
   # without a normalising pass over the whole register first.
   query <- mb_restrict_ids(lpr, id_col, ids)
-  if (!is.null(year_min)) {
-    query <- dplyr::filter(query, .data[[year_col]] >= !!year_min)
-  }
+  query <- mb_restrict_dates(query, date_col, from, to)
   raw_pattern <- paste0("^D?(", substring(pattern, 3L))
   query <- dplyr::filter(query, grepl(!!raw_pattern, .data[[code_col]]))
   query <- dplyr::select(query, dplyr::all_of(c(id_col, code_col, date_col)))
@@ -251,7 +248,7 @@ mb_diagnose_one <- function(lpr, condition, codes,
                        "onset_code", "n_records", "first_date", "last_date")]
 
   list(data          = people,
-       extra         = list("_records" = if (keep_records) records else NULL),
+       extra         = list("_all_events" = if (keep_events) records else NULL),
        n_codes       = length(include_codes),
        pattern       = pattern,
        n_rows        = n_rows,

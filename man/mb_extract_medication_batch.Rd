@@ -13,8 +13,8 @@ mb_extract_medication_batch(
   id_col = "pnr",
   code_col = "atc",
   date_col = "eksd",
-  year_col = "year",
-  year_min = 1997,
+  from = NULL,
+  to = NULL,
   dedupe_same_day = TRUE,
   ids = NULL,
   verbose = TRUE
@@ -40,9 +40,11 @@ per-condition resume - see \verb{@details}.}
 \item{id_col, code_col, date_col}{Column names. \code{code_col} must hold the
 \emph{full} ATC code, not a truncated level.}
 
-\item{year_col, year_min}{Restrict to dispensings from this year onward.
-Defaults to 1997, matching \code{\link[=mb_extract_medication]{mb_extract_medication()}}. Set
-\code{year_min = NULL} to keep every year.}
+\item{from, to}{Inclusive date window on \code{date_col} (Date or \code{NULL}).
+Defaults (\code{NULL}, \code{NULL}) keep the entire register. Applied early,
+upstream of every branch and the window-function pass. For LMDB, pass
+\code{from = as.Date("1997-01-01")} to avoid the pre-1997 mother-CPR
+artifact - see \code{\link[=mb_extract_medication]{mb_extract_medication()}} and DECISIONS.md.}
 
 \item{dedupe_same_day}{Count several same-day dispensings as one. See
 \code{\link[=mb_flag_users]{mb_flag_users()}}.}
@@ -78,10 +80,10 @@ Not implemented in this function, on purpose:
 is ever collected here.
 \item \code{keep_all_users} - would change the \code{.rds} shape (NA-onset rows kept)
 in a way not yet decided for the merge functions.
-\item \code{save_dispensings} - reintroduces exactly the raw-collect memory cost
-this function exists to avoid. Use
-\code{mb_extract_medication(conditions = "x", save_dispensings = TRUE)}
-for one condition's raw records instead.
+\item \code{keep_events} - reintroduces exactly the raw-collect memory cost
+this function exists to avoid. For prevalence inputs use sequential
+\code{mb_extract_medication(conditions = "x", keep_events = TRUE)}
+(plus \code{from}/\code{to}/\code{ids} as needed) instead.
 }
 
 Resume is coarser than \code{\link[=mb_extract_medication]{mb_extract_medication()}}'s: a batch (every

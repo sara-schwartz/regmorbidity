@@ -11,10 +11,10 @@ mb_diagnose_one(
   id_col,
   code_col,
   date_col,
-  year_col,
-  year_min,
+  from,
+  to,
   dedupe_same_day = TRUE,
-  keep_records = FALSE,
+  keep_events = FALSE,
   ids = NULL
 )
 }

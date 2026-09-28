@@ -18,10 +18,9 @@ mb_prevalence_all(
 )
 }
 \arguments{
-\item{dir}{Directory holding \verb{<condition>_dispensings.rds} (written by
-\code{mb_extract_medication(save_dispensings = TRUE)}) and/or
-\verb{<condition>_records.rds} (written by
-\code{mb_extract_diagnosis(keep_records = TRUE)}) - the raw records
+\item{dir}{Directory holding \verb{<condition>_all_events.rds} (written by
+\code{mb_extract_medication(keep_events = TRUE)} or
+\code{mb_extract_diagnosis(keep_events = TRUE)}) - the raw records
 \code{mb_prevalence()} needs, not the extraction result itself.}
 
 \item{as_of}{Single date, the index date - the same for every condition.}
@@ -59,3 +58,4 @@ extraction used) and its own \code{lookback} (from Anders's sheet, or
 wherever - the code lists are frozen, so this stays a separate argument
 rather than a code list column; see DECISIONS.md 4.1).
 }
+\keyword{internal}

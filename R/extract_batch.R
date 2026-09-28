@@ -21,9 +21,10 @@
 #   No prefilter_col/prefilter_len - there is nothing to shrink, since raw
 #   rows are never collected here at all. No keep_all_users - would change
 #   the .rds shape (NA-onset rows) in a way not yet decided for the merge
-#   functions. No save_dispensings - reintroduces exactly the raw-collect
-#   cost this file exists to avoid; use mb_extract_medication(conditions =
-#   "x", save_dispensings = TRUE) for that one condition instead.
+#   functions. No keep_events - reintroduces exactly the raw-collect
+#   cost this file exists to avoid. For prevalence inputs, use sequential
+#   mb_extract_medication(conditions = "x", keep_events = TRUE, from/to/ids
+#   as needed) instead.
 #
 # WHY A SEPARATE FILE, NOT A CHANGE TO mb_extract_medication()
 #   Genuinely different code path (batched SQL vs. per-condition R loop),
@@ -127,19 +128,18 @@ mb_batch_branch <- function(base, condition, include_codes, exclude_codes,
 #' the code that triggered it, NA if the person never qualified) computed
 #' alongside each other - all inside the one collect() the caller does once.
 #'
-#' year_min is applied here, upstream of every branch, before the window
+#' from/to are applied here, upstream of every branch, before the window
 #' function runs - not as a filter on the computed onset afterward. A
-#' pre-cutoff dispensing can be the earlier half of a qualifying pair whose
-#' LATER half falls after year_min; filtering post hoc would keep that pair
-#' wrongly (2026-09-26 DST session, the bipolar anomaly - TODO.txt section 5).
+#' pre-window dispensing can be the earlier half of a qualifying pair whose
+#' LATER half falls inside the window; filtering post hoc would keep that
+#' pair wrongly (2026-09-26 DST session, the bipolar anomaly - TODO.txt
+#' section 5).
 #' @keywords internal
 mb_batch_query <- function(lmdb, codes, batch, id_col, code_col, date_col,
-                          year_col, year_min, dedupe_same_day, ids) {
+                          from, to, dedupe_same_day, ids) {
 
   base <- mb_restrict_ids(lmdb, id_col, ids)
-  if (!is.null(year_min) && mb_has_col(lmdb, year_col)) {
-    base <- dplyr::filter(base, .data[[year_col]] >= !!year_min)
-  }
+  base <- mb_restrict_dates(base, date_col, from, to)
 
   branches <- lapply(batch$conditions, function(condition) {
     rules         <- codes[codes$condition == condition, , drop = FALSE]
@@ -358,9 +358,11 @@ mb_run_batches <- function(batches, worker, outdir, resume, verbose) {
 #'   per-condition resume - see `@details`.
 #' @param id_col,code_col,date_col Column names. `code_col` must hold the
 #'   *full* ATC code, not a truncated level.
-#' @param year_col,year_min Restrict to dispensings from this year onward.
-#'   Defaults to 1997, matching [mb_extract_medication()]. Set
-#'   `year_min = NULL` to keep every year.
+#' @param from,to Inclusive date window on `date_col` (Date or `NULL`).
+#'   Defaults (`NULL`, `NULL`) keep the entire register. Applied early,
+#'   upstream of every branch and the window-function pass. For LMDB, pass
+#'   `from = as.Date("1997-01-01")` to avoid the pre-1997 mother-CPR
+#'   artifact - see [mb_extract_medication()] and DECISIONS.md.
 #' @param dedupe_same_day Count several same-day dispensings as one. See
 #'   [mb_flag_users()].
 #' @param ids Restrict to these person ids before anything else runs, via
@@ -373,10 +375,10 @@ mb_run_batches <- function(batches, worker, outdir, resume, verbose) {
 #'   is ever collected here.
 #' * `keep_all_users` - would change the `.rds` shape (NA-onset rows kept)
 #'   in a way not yet decided for the merge functions.
-#' * `save_dispensings` - reintroduces exactly the raw-collect memory cost
-#'   this function exists to avoid. Use
-#'   `mb_extract_medication(conditions = "x", save_dispensings = TRUE)`
-#'   for one condition's raw records instead.
+#' * `keep_events` - reintroduces exactly the raw-collect memory cost
+#'   this function exists to avoid. For prevalence inputs use sequential
+#'   `mb_extract_medication(conditions = "x", keep_events = TRUE)`
+#'   (plus `from`/`to`/`ids` as needed) instead.
 #'
 #' Resume is coarser than [mb_extract_medication()]'s: a batch (every
 #' condition sharing one prescription rule) is skipped only when ALL of
@@ -401,8 +403,8 @@ mb_extract_medication_batch <- function(lmdb,
                                         id_col          = "pnr",
                                         code_col        = "atc",
                                         date_col        = "eksd",
-                                        year_col        = "year",
-                                        year_min        = 1997,
+                                        from            = NULL,
+                                        to              = NULL,
                                         dedupe_same_day = TRUE,
                                         ids             = NULL,
                                         verbose         = TRUE) {
@@ -433,12 +435,10 @@ mb_extract_medication_batch <- function(lmdb,
              call. = FALSE)
       }
     }
-    if (!is.null(year_min) && !year_col %in% available_cols) {
-      stop("year_min = ", year_min, " but there is no '", year_col,
-           "' column. Pass year_col = <name>, or year_min = NULL to keep ",
-           "every year.", call. = FALSE)
-    }
   }
+
+  from <- mb_as_bound(from, "from")
+  to   <- mb_as_bound(to,   "to")
 
   if (!is.null(outdir) && !dir.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
@@ -448,7 +448,7 @@ mb_extract_medication_batch <- function(lmdb,
 
   worker <- function(batch) {
     result    <- mb_batch_query(lmdb, codes, batch, id_col, code_col,
-                                date_col, year_col, year_min,
+                                date_col, from, to,
                                 dedupe_same_day, ids)
     collected <- dplyr::collect(result)
 

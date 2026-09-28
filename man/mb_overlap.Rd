@@ -23,3 +23,4 @@ Prefix matching means overlap is not only exact equality: a condition listing
 \code{C02C} captures everything a condition listing \code{C02CA} captures. Both are
 reported.
 }
+\keyword{internal}

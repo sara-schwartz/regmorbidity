@@ -38,7 +38,7 @@
 #   12. Short codes
 #   13. mb_check_codes()
 #   14. Provenance
-#   15. year_min default
+#   15. from/to date window
 # .............................................................................
 
 suppressMessages({library(dplyr); library(data.table); library(rlang)})
@@ -53,7 +53,11 @@ if (requireNamespace("regmorbidity", quietly = TRUE)) {
   # INSTALLED package, which is the configuration that catches a missing one.
   for (nm in c("MB_CODELIST_COLS", "mb_run_conditions", "mb_restrict_ids",
                "mb_lookback_days", "mb_rule_batches", "mb_batch_query",
-               "mb_is_lazy")) {
+               "mb_is_lazy",
+               # demoted from export (DECISIONS.md 1.3); suite still covers them
+               "mb_validate_codelist", "mb_condition_logic", "mb_normalize_icd10",
+               "mb_flag_users", "mb_prevalence_all", "mb_overlap", "mb_lookup",
+               "mb_compare")) {
     assign(nm, get(nm, envir = asNamespace("regmorbidity")))
   }
   CODES <- system.file("extdata", "codelists", package = "regmorbidity")
@@ -262,23 +266,50 @@ for (cond in names(jie_atc2)) {
 }
 ok("all 15 conditions match Jie's atc2 patterns", length(bad) == 0)
 if (length(bad)) cat("     mismatched:", paste(bad, collapse = ", "), "\n")
-# 15. year_min default ----
+# 15. from/to date window ----
 
-cat("\n=== 15. year_min defaults to 1997 ===\n")
-ok("default is 1997", formals(mb_extract_medication)$year_min == 1997)
+cat("\n=== 15. from/to date window (defaults NULL) ===\n")
+ok("from defaults to NULL", is.null(formals(mb_extract_medication)$from))
+ok("to defaults to NULL",   is.null(formals(mb_extract_medication)$to))
+ok("batch from defaults to NULL",
+   is.null(formals(mb_extract_medication_batch)$from))
+ok("diagnosis from defaults to NULL",
+   is.null(formals(mb_extract_diagnosis)$from))
+
 old <- data.frame(pnr = c("o","o"), atc = "C09AA05", atc2 = "C09",
-                  eksd = as.Date(c("1995-01-01","1995-06-01")), year = 1995,
+                  eksd = as.Date(c("1995-01-01","1995-06-01")),
                   stringsAsFactors = FALSE)
-ok("1995 dropped by default",
+ok("default (from/to NULL) keeps the entire register, including 1995",
    nrow(mb_extract_medication(old, "hypertension", codes = codes,
-                           verbose = FALSE)[["hypertension"]]) == 0)
-ok("year_min = NULL keeps 1995",
-   nrow(mb_extract_medication(old, "hypertension", codes = codes, year_min = NULL,
                            verbose = FALSE)[["hypertension"]]) == 1)
-ok("missing year column errors clearly",
-   inherits(try(mb_extract_medication(old[, c("pnr","atc","atc2","eksd")],
-                                   "hypertension", codes = codes,
-                                   verbose = FALSE), silent = TRUE), "try-error"))
+ok("from = 1997-01-01 drops 1995 dispensings",
+   nrow(mb_extract_medication(old, "hypertension", codes = codes,
+                           from = as.Date("1997-01-01"),
+                           verbose = FALSE)[["hypertension"]]) == 0)
+
+# Inclusive bounds on both ends, and a mid-window person who qualifies.
+win <- data.frame(
+  pnr = c("a","a", "b","b", "c","c"),
+  atc = "C09AA05", atc2 = "C09",
+  eksd = as.Date(c("1999-12-01","2000-01-15",
+                   "2000-06-01","2000-07-01",
+                   "2001-01-01","2001-02-01")),
+  stringsAsFactors = FALSE)
+win_res <- mb_extract_medication(win, "hypertension", codes = codes,
+                                 from = as.Date("2000-01-01"),
+                                 to   = as.Date("2000-12-31"),
+                                 verbose = FALSE)[["hypertension"]]
+ok("from/to inclusive: person fully inside the window qualifies",
+   "b" %in% win_res$pnr)
+ok("from/to inclusive: person with both dates after `to` is dropped",
+   !"c" %in% win_res$pnr)
+ok("from/to inclusive: person whose only in-window date cannot meet min=2 alone",
+   !"a" %in% win_res$pnr)
+
+ok("bad from errors clearly",
+   inherits(try(mb_extract_medication(old, "hypertension", codes = codes,
+                                   from = "not-a-date", verbose = FALSE),
+                silent = TRUE), "try-error"))
 
 cat("\nDone.\n")
 
@@ -524,15 +555,15 @@ if (is.na(pkg_root)) {
                   as.character(e[[2]]) else NULL)))
 
   expected <- sort(c(
-    "mb_codelist", "mb_validate_codelist", "mb_write_codelist",
-    "mb_inspect_codes", "mb_check_codes", "mb_overlap", "mb_lookup",
-    "mb_compare", "mb_extract_medication", "mb_extract_medication_batch",
-    "mb_extract_diagnosis", "mb_flag_users",
-    "mb_normalize_icd10", "mb_merge_conditions", "mb_merge_all",
-    "mb_condition_logic", "mb_load_conditions", "mb_to_wide",
-    "mb_count_conditions", "mb_prevalence", "mb_prevalence_all"))
+    "mb_codelist", "mb_write_codelist",
+    "mb_inspect_codes", "mb_check_codes",
+    "mb_extract_medication", "mb_extract_medication_batch",
+    "mb_extract_diagnosis",
+    "mb_merge_conditions", "mb_merge_all",
+    "mb_load_conditions", "mb_to_wide",
+    "mb_count_conditions", "mb_prevalence"))
 
-  ok("exactly the intended 21 functions are public",
+  ok("exactly the intended 13 functions are public",
      identical(declared, expected))
   if (!identical(declared, expected)) {
     cat("     unexpectedly public:", paste(setdiff(declared, expected), collapse = ", "), "\n")
@@ -542,7 +573,10 @@ if (is.na(pkg_root)) {
   # the per-condition workers and the driver are implementation, not API
   ok("internal helpers stay internal",
      !any(c("mb_extract_one", "mb_diagnose_one", "mb_run_conditions",
-            "mb_onset", "mb_pattern", "mb_half") %in% declared))
+            "mb_onset", "mb_pattern", "mb_half",
+            "mb_validate_codelist", "mb_condition_logic", "mb_normalize_icd10",
+            "mb_flag_users", "mb_prevalence_all", "mb_overlap", "mb_lookup",
+            "mb_compare") %in% declared))
 }
 
 cat("\nDone.\n")
@@ -561,8 +595,8 @@ rev_lmdb <- data.frame(pnr = c("a","a"), atc = "A10AB01", atc2 = "A10",
 # side files must not be read back as conditions
 sf <- file.path(tempdir(), "sidefiles"); unlink(sf, recursive = TRUE)
 mb_extract_medication(rev_lmdb, codes = rev_codes, outdir = sf,
-                   save_dispensings = TRUE, verbose = FALSE)
-ok("a side file is written", file.exists(file.path(sf, "dm_dispensings.rds")))
+                   keep_events = TRUE, verbose = FALSE)
+ok("a side file is written", file.exists(file.path(sf, "dm_all_events.rds")))
 back <- mb_load_conditions(sf)
 ok("mb_load_conditions ignores side files",
    nrow(back) == 1 && identical(unique(back$condition), "dm"))
@@ -618,9 +652,9 @@ prev_lmdb <- data.frame(
 
 pd <- file.path(tempdir(), "prevdisp"); unlink(pd, recursive = TRUE)
 mb_extract_medication(prev_lmdb, codes = prev_codes, outdir = pd,
-                   save_dispensings = TRUE, verbose = FALSE)
+                   keep_events = TRUE, verbose = FALSE)
 full <- readRDS(file.path(pd, "dm.rds"))
-disp <- readRDS(file.path(pd, "dm_dispensings.rds"))
+disp <- readRDS(file.path(pd, "dm_all_events.rds"))
 
 as_of <- as.Date("2006-01-01")
 
@@ -818,7 +852,7 @@ pa_lmdb <- data.frame(
 
 pa_dir <- file.path(tempdir(), "prevall"); unlink(pa_dir, recursive = TRUE)
 mb_extract_medication(pa_lmdb, codes = pa_codes, outdir = pa_dir,
-                      save_dispensings = TRUE, verbose = FALSE)
+                      keep_events = TRUE, verbose = FALSE)
 
 pa_as_of <- as.Date("2006-01-01")
 
@@ -826,7 +860,7 @@ pa_as_of <- as.Date("2006-01-01")
 ##      calling mb_prevalence() by hand for the same condition
 pa_single <- mb_prevalence_all(pa_dir, as_of = pa_as_of, lookback = Inf,
                                codes = pa_codes, verbose = FALSE)
-disp_dm  <- readRDS(file.path(pa_dir, "dm_dispensings.rds"))
+disp_dm  <- readRDS(file.path(pa_dir, "dm_all_events.rds"))
 solo_dm  <- mb_prevalence(disp_dm, as_of = pa_as_of, lookback = Inf,
                           min_prescriptions = 2, window_days = 365)
 ok("mb_prevalence_all() with a single lookback matches a solo mb_prevalence() call",
@@ -954,12 +988,12 @@ mb28_lmdb_na <- data.frame(pnr = c("p1","p1"), atc = c("A10AB01","A10AB01"),
                           eksd = as.Date(c("2000-01-01","2020-01-01")),
                           year = c(2000,2020), stringsAsFactors = FALSE)
 mb28_na <- mb_extract_medication_batch(mb28_lmdb_na, codes = mb28_codes_na,
-                                       outdir = NULL, year_min = NULL,
+                                       outdir = NULL,
                                        verbose = FALSE)
 ok("window_days = NA - a 20-year gap still qualifies",
    "p1" %in% mb28_na$any$pnr)
 
-## 28e. year_min is applied upstream, not as a post-hoc filter on onset -
+## 28e. from is applied upstream, not as a post-hoc filter on onset -
 ##      the mechanism behind the bipolar anomaly found on real DST data,
 ##      2026-09-26 (TODO.txt section 5)
 mb28_codes_ym <- data.frame(condition = "x", vocab_id = "ATC", code = "A10",
@@ -967,12 +1001,13 @@ mb28_codes_ym <- data.frame(condition = "x", vocab_id = "ATC", code = "A10",
                            stringsAsFactors = FALSE)
 mb28_lmdb_ym <- data.frame(
   pnr = c("p1","p1"), atc = c("A10AB01","A10AB01"),
-  eksd = as.Date(c("1996-12-01","1997-02-01")), year = c(1996,1997),
+  eksd = as.Date(c("1996-12-01","1997-02-01")),
   stringsAsFactors = FALSE)
 mb28_ym <- mb_extract_medication_batch(mb28_lmdb_ym, codes = mb28_codes_ym,
-                                       outdir = NULL, year_min = 1997,
+                                       outdir = NULL,
+                                       from = as.Date("1997-01-01"),
                                        verbose = FALSE)
-ok("year_min removes a pre-cutoff anchor dispensing, not just a post-hoc onset filter",
+ok("from removes a pre-window anchor dispensing, not just a post-hoc onset filter",
    !("p1" %in% mb28_ym$x$pnr))
 
 ## 28f. resume is batch-granular: skip only when EVERY condition sharing a
@@ -1037,7 +1072,7 @@ if (requireNamespace("DBI", quietly = TRUE) &&
   mb28_batch <- mb_rule_batches(mb_codelist(mb28_codes, vocab = "ATC"),
                                 c("dm", "htn"))[["2|365"]]
   mb28_q <- mb_batch_query(mb28_lazy_tbl, mb_codelist(mb28_codes, vocab = "ATC"),
-                           mb28_batch, "pnr", "atc", "eksd", "year", 1997,
+                           mb28_batch, "pnr", "atc", "eksd", NULL, NULL,
                            TRUE, NULL)
   mb28_sql <- toupper(as.character(dbplyr::remote_query(mb28_q)))
   ok("batch query pushes down: LAG/OVER/PARTITION BY all in the generated SQL",

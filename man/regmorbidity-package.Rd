@@ -20,8 +20,7 @@ any number from it.
 
 \describe{
 \item{\code{\link[=mb_codelist]{mb_codelist()}}}{load from a folder of per-condition CSVs, one file,
-or a data frame}
-\item{\code{\link[=mb_validate_codelist]{mb_validate_codelist()}}}{refuse lists that would fail silently}
+or a data frame (validates on load)}
 \item{\code{\link[=mb_write_codelist]{mb_write_codelist()}}}{split a list into one CSV per condition, for
 review by someone who does not read R}
 }
@@ -34,32 +33,30 @@ review by someone who does not read R}
 check that catches a 4-character pattern aimed at a 3-character column}
 \item{\code{\link[=mb_check_codes]{mb_check_codes()}}}{do these codes match anything at all, which is
 how a true zero is told from a typo}
-\item{\code{\link[=mb_overlap]{mb_overlap()}}}{which conditions share codes}
-\item{\code{\link[=mb_lookup]{mb_lookup()}}}{what would this one record be counted as}
-\item{\code{\link[=mb_compare]{mb_compare()}}}{what changed between two versions of a list}
 }
 }
 
 \section{Extraction}{
 
 \describe{
-\item{\code{\link[=mb_extract_medication]{mb_extract_medication()}}}{the ATC half, one condition at a time,
-checkpointed so an interrupted run resumes}
-\item{\code{\link[=mb_extract_diagnosis]{mb_extract_diagnosis()}}}{the ICD-10 half, same contract}
-\item{\code{\link[=mb_flag_users]{mb_flag_users()}}}{the prescription rule on its own, for records you
-have already filtered}
-\item{\code{\link[=mb_normalize_icd10]{mb_normalize_icd10()}}}{\code{DI50} and \code{I50} are the same code}
+\item{\code{\link[=mb_extract_medication_batch]{mb_extract_medication_batch()}}}{recommended ATC path: every
+condition sharing one prescription rule in one query, collecting only
+final onset rows}
+\item{\code{\link[=mb_extract_medication]{mb_extract_medication()}}}{sequential backup - one condition at a
+time, checkpointed per condition; use when you need
+\code{keep_events} or finer resume}
+\item{\code{\link[=mb_extract_diagnosis]{mb_extract_diagnosis()}}}{the ICD-10 half, same contract as the
+sequential medication extractor}
 }
 }
 
-\section{Putting it together}{
+\section{Downstream (one path)}{
 
 \describe{
-\item{\code{\link[=mb_merge_conditions]{mb_merge_conditions()}}}{combine the two halves of one condition,
-OR or AND}
+\item{\code{\link[=mb_merge_conditions]{mb_merge_conditions()}}}{combine the two halves of one condition
+(OR or AND)}
 \item{\code{\link[=mb_merge_all]{mb_merge_all()}}}{every condition, from the two output folders}
-\item{\code{\link[=mb_condition_logic]{mb_condition_logic()}}}{which rule a condition uses}
-\item{\code{\link[=mb_load_conditions]{mb_load_conditions()}}}{read the per-condition files back}
+\item{\code{\link[=mb_load_conditions]{mb_load_conditions()}}}{read the per-condition \code{.rds} files back}
 \item{\code{\link[=mb_to_wide]{mb_to_wide()}}}{one column per condition}
 \item{\code{\link[=mb_count_conditions]{mb_count_conditions()}}}{\code{n_conditions} and \code{multimorbid}}
 \item{\code{\link[=mb_prevalence]{mb_prevalence()}}}{condition status at a point in time, with a

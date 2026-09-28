@@ -24,3 +24,4 @@ digits, so a Danish code is D followed by a LETTER. \code{DD86} is the Danish fo
 of \code{D86}; \code{D86} is already WHO form because its second character is a digit.
 Matching on \verb{^D[A-Z]} therefore never strips a D that belongs to the code.
 }
+\keyword{internal}

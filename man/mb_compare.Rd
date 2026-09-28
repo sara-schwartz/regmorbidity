@@ -25,3 +25,4 @@ Both sides are normalised through \code{\link[=mb_codelist]{mb_codelist()}} firs
 whitespace, letter case and a blank-versus-\code{FALSE} exclude cell are not
 reported as changes. What is reported is a change to the definition.
 }
+\keyword{internal}

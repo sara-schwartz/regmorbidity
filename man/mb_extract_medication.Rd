@@ -15,11 +15,11 @@ mb_extract_medication(
   date_col = "eksd",
   prefilter_col = "atc2",
   prefilter_len = 3L,
-  year_col = "year",
-  year_min = 1997,
+  from = NULL,
+  to = NULL,
   dedupe_same_day = TRUE,
   keep_all_users = FALSE,
-  save_dispensings = FALSE,
+  keep_events = FALSE,
   ids = NULL,
   verbose = TRUE
 )
@@ -47,14 +47,17 @@ or \code{NULL} to filter on \code{code_col} directly.}
 \item{prefilter_len}{Characters held by \code{prefilter_col}. Check with
 \code{\link[=mb_inspect_codes]{mb_inspect_codes()}} before trusting it.}
 
-\item{year_col, year_min}{Restrict to dispensings from this year onward.
-Defaults to 1997, as \code{dgt_medication.R} uses throughout, which deliberately
-drops 1995-96. Set \code{year_min = NULL} to keep every year, or if the data has
-no year column.}
+\item{from, to}{Inclusive date window on \code{date_col} (Date or \code{NULL}).
+Defaults (\code{NULL}, \code{NULL}) keep the entire register. Applied early, before
+the code filter and the prescription rule, so a dispensing outside the
+window cannot anchor a qualifying pair. For LMDB, pass
+\code{from = as.Date("1997-01-01")} to avoid the pre-1997 mother-CPR artifact
+(children's prescriptions recorded under the mother's CPR until 1996;
+see DECISIONS.md and ASSUMPTIONS_AND_LIMITATIONS.txt).}
 
 \item{dedupe_same_day, keep_all_users}{Passed to \code{\link[=mb_flag_users]{mb_flag_users()}}.}
 
-\item{save_dispensings}{Also write \verb{<condition>_dispensings.rds}, the matched
+\item{keep_events}{Also write \verb{<condition>_all_events.rds}, the matched
 records before the prescription rule is applied - the equivalent of the
 \verb{*_filtered.rds} files in \code{dgt_medication.R}. Large.}
 

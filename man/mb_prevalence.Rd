@@ -18,9 +18,9 @@ mb_prevalence(
 }
 \arguments{
 \item{data}{One condition's raw matching records - what
-\code{mb_extract_medication(save_dispensings = TRUE)} or
-\code{mb_extract_diagnosis(keep_records = TRUE)} write to
-\verb{<condition>_dispensings.rds} / \verb{<condition>_records.rds}. Not the
+\code{mb_extract_medication(keep_events = TRUE)} or
+\code{mb_extract_diagnosis(keep_events = TRUE)} write to
+\verb{<condition>_all_events.rds}. Not the
 extraction result itself, which has already applied the rule and
 discarded the records.}
 

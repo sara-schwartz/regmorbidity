@@ -25,14 +25,14 @@
 
 #' The .rds files in a directory that are conditions
 #'
-#' `save_dispensings` and `keep_records` write `<condition>_dispensings.rds` and
-#' `<condition>_records.rds` alongside the results. Those are raw records with a
-#' different shape, so reading them back as conditions fails - which it did,
-#' until this was factored out and used by both readers.
+#' `keep_events` writes `<condition>_all_events.rds` alongside the results.
+#' Those are raw records with a different shape, so reading them back as
+#' conditions fails - which it did, until this was factored out and used by
+#' both readers.
 #' @keywords internal
 mb_condition_files <- function(dir, full.names = TRUE) {
   files <- list.files(dir, pattern = "\\.rds$")
-  files <- files[!grepl("_(records|dispensings)\\.rds$", files)]
+  files <- files[!grepl("_all_events\\.rds$", files)]
   if (full.names) file.path(dir, files) else files
 }
 
