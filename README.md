@@ -82,8 +82,9 @@ for toy runs (see the vignette).
 ## Recommended workflow
 
 The usual study run is the five steps below (load lists → extract diagnoses →
-extract medications with batch → merge → count). All fifteen exported
-functions are listed in the next section.
+extract medications with batch → merge → count). How many *conditions* you get
+depends on your CSV code lists — not on the package API. The package itself
+exposes a fixed set of **functions** (listed in the next section).
 
 ```r
 library(regmorbidity)
@@ -174,7 +175,7 @@ Listed in the order most people meet them. One sentence each — **when to use**
 `keep_events`, `mb_check_codes` example, prevalence, merge logic, exclusion
 timing, and why `mb_inspect_code_lengths` exists.
 
-`?regmorbidity` — all 15 exported functions.
+`?regmorbidity` — package help for every exported function.
 
 Design notes (`ASSUMPTIONS_AND_LIMITATIONS.txt`, `DECISIONS.md`) live in the
 source working tree if present; otherwise use the vignette and `?regmorbidity`.

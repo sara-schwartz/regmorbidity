@@ -22,7 +22,7 @@ data — hospital diagnoses (LPR) and dispensings (LMDB) — using editable CSV
 code lists rather than hard-coded rules. It computes no score and is not an
 implementation of any published multimorbidity index.
 
-The public surface is **15 exported functions**. The README is the inventory
+The package API is a fixed set of **exported functions** (see README). How many conditions you derive depends on your code-list CSVs, not on that API count. The README is the inventory
 and short one-liners for every function; this vignette owns the worked examples and the
 decisions the README only points at (batch vs sequential, `keep_events`,
 prevalence lookback, inspect lengths, exclusion timing).
@@ -264,7 +264,7 @@ long2 <- mb_apply_exclusions(long, as_of = as.Date("2015-01-01"))
 
 ## Where to read more
 
-`?regmorbidity` and the README — all 15 exports as one-liners / tiers.
+`?regmorbidity` and the README — every exported function as a one-liner.
 
 In the source working tree if present (often gitignored / local):
 

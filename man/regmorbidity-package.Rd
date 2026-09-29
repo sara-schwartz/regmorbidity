@@ -14,7 +14,7 @@ halves.
 This is not an implementation of any published index. The bundled lists
 (ATC + first-pass ICD; distress archived out of the default set) take their
 starting point in those of Prior et al. (2016) and are meant to be revised,
-not cited. Fifteen exported functions. Design notes
+not cited. The number of conditions comes from your CSV lists; the package API is a fixed set of exported functions. Design notes
 (\code{ASSUMPTIONS_AND_LIMITATIONS.txt}, \code{DECISIONS.md}) live in the source
 working tree if present; otherwise use \code{vignette("regmorbidity")} and this
 help page.
