@@ -203,9 +203,7 @@ Danish register ICD codes often carry a leading **D** (`DI10` in the register
 vs `I10` in published lists). The package normalises both forms before
 matching.
 
-If you provide your own CSV code lists (or need column-name overrides,
-preflight checks, sequential extract, prevalence, or exclusions), see
-`vignette("regmorbidity")`.
+If you provide your own CSV code lists, see `vignette("regmorbidity")`.
 
 ## Batch vs sequential medication methods
 
