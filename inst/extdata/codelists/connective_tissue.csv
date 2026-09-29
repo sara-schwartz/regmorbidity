@@ -1,0 +1,13 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M05,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M06,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M08,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M09,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M30,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M31,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M32,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M33,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M34,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M35,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,M36,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"
+connective_tissue,Connective tissue disorder,Musculoskeletal,ICD10,D86,FALSE,1,,"Prior M05–M06,M08–M09,M30–M36,D86 (Sara keep D86)"

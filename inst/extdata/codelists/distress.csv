@@ -1,2 +1,0 @@
-"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
-"distress","Psychological distress","Mental","ATC","N06A",FALSE,2,365,"dgt_medication.R line 272"

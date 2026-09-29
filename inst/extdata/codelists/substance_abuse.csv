@@ -1,0 +1,9 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+substance_abuse,Substance abuse,Mental,ICD10,F11,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+substance_abuse,Substance abuse,Mental,ICD10,F12,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+substance_abuse,Substance abuse,Mental,ICD10,F13,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+substance_abuse,Substance abuse,Mental,ICD10,F14,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+substance_abuse,Substance abuse,Mental,ICD10,F15,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+substance_abuse,Substance abuse,Mental,ICD10,F16,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+substance_abuse,Substance abuse,Mental,ICD10,F18,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+substance_abuse,Substance abuse,Mental,ICD10,F19,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28

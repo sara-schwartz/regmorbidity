@@ -1,3 +1,4 @@
-"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
-"dyslipidemia","Dyslipidemia","Circulatory","ATC","C10A","FALSE","2","365","Lipid modifying agents, plain; expanded from C10, dgt_medication.R line 78"
-"dyslipidemia","Dyslipidemia","Circulatory","ATC","C10B","FALSE","2","365","Lipid modifying agents, combinations; expanded from C10, dgt_medication.R line 78"
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+dyslipidemia,Dyslipidemia,Circulatory,ATC,C10A,FALSE,2,365,"Lipid modifying agents, plain; expanded from C10"
+dyslipidemia,Dyslipidemia,Circulatory,ATC,C10B,FALSE,2,365,"Lipid modifying agents, combinations; expanded from C10"
+dyslipidemia,Dyslipidemia,Circulatory,ICD10,E78,FALSE,2,365,Prior E78; if not IHD (stage-2 exclusion); first-pass 2026-09-28

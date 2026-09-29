@@ -11,8 +11,9 @@ mb_to_wide(long, id_col = "pnr", value = "onset_date")
 
 \item{id_col}{Person id column name.}
 
-\item{value}{Which column to spread: \code{"onset_date"} (default) or
-\code{"n_dispensations"}.}
+\item{value}{Which column to spread: \code{"onset_date"} (default) or a count
+column. Counts are stored as \code{"n_records"}; \code{"n_dispensations"} is
+accepted as an alias for the same column when present under either name.}
 }
 \value{
 A wide data frame: one row per person, one column per condition.

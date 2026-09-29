@@ -15,6 +15,8 @@ mb_null_result(
 }
 \description{
 Returned when a condition matches nothing, so downstream rbind() and column
-selection behave the same whether or not anyone had the condition.
+selection behave the same whether or not anyone had the condition. Columns
+match the non-empty onset schema (including \code{source}), same as
+\code{\link[=mb_null_result_batch]{mb_null_result_batch()}}.
 }
 \keyword{internal}

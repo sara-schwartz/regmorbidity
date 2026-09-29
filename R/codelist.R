@@ -89,11 +89,14 @@ MB_ATC_MAX_NCHAR <- 7L
 #'     to keep one file per disease. If a file has no `condition` column, the
 #'     file name is used as the condition (`hypertension.csv` -> "hypertension").
 #' @param vocab Optionally keep only one vocabulary, e.g. `"ATC"`.
+#' @param conditions Optional character vector of condition keys to keep
+#'   after load (`NULL` = all). Unknown names are an error.
 #' @param validate Run [mb_validate_codelist()] before returning. Leave on
 #'   unless you are deliberately inspecting a broken list.
 #' @return A data frame with the columns described at the top of this file.
 #' @export
-mb_codelist <- function(x = NULL, vocab = NULL, validate = TRUE) {
+mb_codelist <- function(x = NULL, vocab = NULL, conditions = NULL,
+                        validate = TRUE) {
 
   if (is.null(x)) {
     x <- system.file("extdata", "codelists", package = "regmorbidity")
@@ -127,6 +130,21 @@ mb_codelist <- function(x = NULL, vocab = NULL, validate = TRUE) {
            paste(sort(unique(out$vocab_id)), collapse = ", "), call. = FALSE)
     }
     out <- out[keep, , drop = FALSE]
+  }
+
+  if (!is.null(conditions)) {
+    conditions <- as.character(conditions)
+    if (!length(conditions)) {
+      stop("`conditions` is empty. Pass condition key(s) or NULL for all.",
+           call. = FALSE)
+    }
+    unknown <- setdiff(conditions, unique(out$condition))
+    if (length(unknown)) {
+      stop("Not in the code list: ", paste(unknown, collapse = ", "),
+           "\nAvailable: ",
+           paste(sort(unique(out$condition)), collapse = ", "), call. = FALSE)
+    }
+    out <- out[out$condition %in% conditions, , drop = FALSE]
   }
 
   if (validate) mb_validate_codelist(out)

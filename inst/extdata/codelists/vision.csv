@@ -1,0 +1,4 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+vision,Vision problem,Neurological,ICD10,H40,FALSE,1,,"Prior H40,H25,H54; glaucoma folded here (d_glaukom NEW not shipped)"
+vision,Vision problem,Neurological,ICD10,H25,FALSE,1,,"Prior H40,H25,H54; glaucoma folded here (d_glaukom NEW not shipped)"
+vision,Vision problem,Neurological,ICD10,H54,FALSE,1,,"Prior H40,H25,H54; glaucoma folded here (d_glaukom NEW not shipped)"

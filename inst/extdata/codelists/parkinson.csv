@@ -1,0 +1,4 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+parkinson,Parkinson disease,Neurological,ICD10,G20,FALSE,1,,Prior G20–G22 dx-only; N04B NEW skipped
+parkinson,Parkinson disease,Neurological,ICD10,G21,FALSE,1,,Prior G20–G22 dx-only; N04B NEW skipped
+parkinson,Parkinson disease,Neurological,ICD10,G22,FALSE,1,,Prior G20–G22 dx-only; N04B NEW skipped

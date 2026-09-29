@@ -1,2 +1,3 @@
-"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
-"migraine","Migraine","Neurological","ATC","N02C",FALSE,2,365,"dgt_medication.R line 238"
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+migraine,Migraine,Neurological,ATC,N02C,FALSE,2,365,dgt_medication.R line 238
+migraine,Migraine,Neurological,ICD10,G43,FALSE,2,365,Prior G43; first-pass 2026-09-28

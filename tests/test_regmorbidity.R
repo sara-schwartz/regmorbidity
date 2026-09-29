@@ -54,10 +54,10 @@ if (requireNamespace("regmorbidity", quietly = TRUE)) {
   for (nm in c("MB_CODELIST_COLS", "mb_run_conditions", "mb_restrict_ids",
                "mb_lookback_days", "mb_rule_batches", "mb_batch_query",
                "mb_is_lazy",
-               # demoted from export (DECISIONS.md 1.3); suite still covers them
+               # demoted from export (DECISIONS.md 1.3); suite still covers them.
+               # mb_overlap / mb_lookup are public again (2026-09-28) — not listed here.
                "mb_validate_codelist", "mb_condition_logic", "mb_normalize_icd10",
-               "mb_flag_users", "mb_prevalence_all", "mb_overlap", "mb_lookup",
-               "mb_compare")) {
+               "mb_flag_users", "mb_prevalence_all", "mb_compare")) {
     assign(nm, get(nm, envir = asNamespace("regmorbidity")))
   }
   CODES <- system.file("extdata", "codelists", package = "regmorbidity")
@@ -77,10 +77,49 @@ ok <- function(label, cond) {
 
 cat("\n=== 1. code list loads and validates ===\n")
 codes <- mb_codelist(CODES)
-ok("15 conditions", length(unique(codes$condition)) == 15)
-ok("61 rows",       nrow(codes) == 61)
+ok("36 conditions (distress archived)", length(unique(codes$condition)) == 36)
+ok("309 rows",      nrow(codes) == 309)
 ok("pain needs 4",  unique(codes$min_prescriptions[codes$condition == "pain"]) == 4)
 ok("window 365",    unique(codes$window_days[codes$condition == "hypertension"]) == 365)
+ok("HTN excludes C02CA (prostate ATC)",
+   any(codes$condition == "hypertension" & codes$code == "C02CA" & codes$exclude))
+ok("distress absent from default bundled set (Sara 2026-09-28)",
+   !"distress" %in% codes$condition)
+ok("epilepsy ICD is G40-G41 only",
+   identical(sort(unique(codes$code[codes$condition == "epilepsy" &
+                                    codes$vocab_id == "ICD10"])),
+             c("G40", "G41")))
+ok("heart_failure is I50 only",
+   identical(unique(codes$code[codes$condition == "heart_failure"]), "I50"))
+ok("ckd first-pass is N18 only",
+   identical(unique(codes$code[codes$condition == "ckd"]), "N18"))
+ok("mb_codelist(conditions=) keeps named conditions",
+   identical(sort(unique(mb_codelist(CODES, conditions = c("pain", "migraine"))$condition)),
+             c("migraine", "pain")))
+ok("mb_codelist(conditions=) refuses unknown names",
+   inherits(try(mb_codelist(CODES, conditions = "not_a_condition"), silent = TRUE),
+            "try-error"))
+
+# C02CA is prostate; HTN must not count it even though C02C would match.
+c02ca_lmdb <- data.frame(
+  pnr = c("x","x","y","y"),
+  atc = c("C02CA01","C02CA01","C09AA05","C09AA05"),
+  atc2 = c("C02","C02","C09","C09"),
+  eksd = as.Date(c("2010-01-01","2010-02-01","2010-01-01","2010-02-01")),
+  stringsAsFactors = FALSE
+)
+c02ca_htn <- mb_extract_medication(c02ca_lmdb, "hypertension", codes = codes,
+                                   from = as.Date("1990-01-01"),
+                                   verbose = FALSE)[["hypertension"]]
+c02ca_pros <- mb_extract_medication(c02ca_lmdb, "prostate", codes = codes,
+                                    from = as.Date("1990-01-01"),
+                                    verbose = FALSE)[["prostate"]]
+ok("C02CA01 does not count as hypertension (exclude row)",
+   !"x" %in% c02ca_htn$pnr)
+ok("C09AA05 still counts as hypertension",
+   "y" %in% c02ca_htn$pnr)
+ok("C02CA01 still counts as prostate",
+   "x" %in% c02ca_pros$pnr)
 # 2. Validation ----
 
 cat("\n=== 2. validation catches silent mistakes ===\n")
@@ -96,7 +135,7 @@ cat("\n=== 3. one CSV per disease ===\n")
 d <- file.path(tempdir(), "per_disease")
 unlink(d, recursive = TRUE)
 paths <- mb_write_codelist(codes, d)
-ok("15 files written", length(paths) == 15)
+ok("36 files written", length(paths) == 36)
 back <- mb_codelist(d)
 ok("round-trips identically",
    isTRUE(all.equal(codes[order(codes$condition, codes$code), MB_CODELIST_COLS],
@@ -125,18 +164,21 @@ lmdb <- data.frame(
   year = c(2010,2010, 2010,2013, 2010,2010, 2010),
   stringsAsFactors = FALSE
 )
-res <- mb_extract_medication(lmdb, "hypertension", codes = codes, verbose = FALSE)[["hypertension"]]
+res <- mb_extract_medication(lmdb, "hypertension", codes = codes, verbose = FALSE,
+                           from = as.Date("1990-01-01"))[["hypertension"]]
 ok("only p1 qualifies", identical(res$pnr, "p1"))
 ok("onset = 2nd dispensing", res$onset_date == as.Date("2010-02-10"))
 ok("p3 same-day pair does not qualify", !"p3" %in% res$pnr)
 
 res_nodedupe <- mb_extract_medication(lmdb, "hypertension", codes = codes,
-                                   dedupe_same_day = FALSE, verbose = FALSE)[["hypertension"]]
+                                   dedupe_same_day = FALSE, verbose = FALSE,
+                           from = as.Date("1990-01-01"))[["hypertension"]]
 ok("without dedupe, p3 would qualify", "p3" %in% res_nodedupe$pnr)
 
 res_nowin <- mb_extract_medication(lmdb, "hypertension",
                                 codes = transform(codes, window_days = NA_integer_),
-                                verbose = FALSE)[["hypertension"]]
+                                verbose = FALSE,
+                           from = as.Date("1990-01-01"))[["hypertension"]]
 ok("with no window, p2 qualifies too", all(c("p1","p2") %in% res_nowin$pnr))
 # 5. Two-stage matching ----
 
@@ -150,7 +192,8 @@ lmdb2 <- data.frame(
                    "2010-01-01","2010-02-01")),
   year = 2010, stringsAsFactors = FALSE
 )
-r <- mb_extract_medication(lmdb2, c("pain","migraine"), codes = codes, verbose = FALSE)
+r <- mb_extract_medication(lmdb2, c("pain","migraine"), codes = codes, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("pain finds only a", identical(r$pain$pnr, "a"))
 ok("migraine finds only b", identical(r$migraine$pnr, "b"))
 ok("pain onset = 4th (min_prescriptions = 4)",
@@ -162,21 +205,25 @@ cat("\n=== 6. anchoring ===\n")
 lmdb3 <- data.frame(pnr = c("x","x"), atc = c("XC09AA","XC09AA"), atc2 = "C09",
                     eksd = as.Date(c("2010-01-01","2010-02-01")), year = 2010,
                     stringsAsFactors = FALSE)
-r3 <- mb_extract_medication(lmdb3, "hypertension", codes = codes, verbose = FALSE)[["hypertension"]]
+r3 <- mb_extract_medication(lmdb3, "hypertension", codes = codes, verbose = FALSE,
+                           from = as.Date("1990-01-01"))[["hypertension"]]
 ok("mid-string match rejected", nrow(r3) == 0)
 # 7. Checkpoint and resume ----
 
 cat("\n=== 7. checkpoint and resume ===\n")
 od <- file.path(tempdir(), "out"); unlink(od, recursive = TRUE)
 s1 <- mb_extract_medication(lmdb, c("hypertension","dyslipidemia"), codes = codes,
-                         outdir = od, verbose = FALSE)
+                         outdir = od, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("two files written", length(list.files(od, pattern = "\\.rds$")) == 2)
 ok("both marked done", all(s1$status == "done"))
 s2 <- mb_extract_medication(lmdb, c("hypertension","dyslipidemia"), codes = codes,
-                         outdir = od, verbose = FALSE)
+                         outdir = od, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("second run skips both", all(s2$status == "skipped"))
 s3 <- mb_extract_medication(lmdb, c("hypertension","dyslipidemia"), codes = codes,
-                         outdir = od, resume = FALSE, verbose = FALSE)
+                         outdir = od, resume = FALSE, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("resume = FALSE re-runs", all(s3$status == "done"))
 # 8. Error handling ----
 
@@ -187,20 +234,23 @@ lmdb_bad <- rbind(lmdb,
 lmdb_bad$eksd <- "not-a-date"   # both conditions now match, both fail to parse
 sfail <- suppressWarnings(
   mb_extract_medication(lmdb_bad, c("hypertension","dyslipidemia"), codes = codes,
-                     outdir = od, resume = FALSE, verbose = FALSE))
+                     outdir = od, resume = FALSE, verbose = FALSE,
+                           from = as.Date("1990-01-01")))
 ok("errors recorded, loop continues", nrow(sfail) == 2 && all(sfail$status == "error"))
 
 # A missing column is a configuration error and should stop before the loop.
 ok("missing column fails fast",
    inherits(try(mb_extract_medication(lmdb, "hypertension", codes = codes,
-                                   date_col = "NOPE", verbose = FALSE),
+                                   date_col = "NOPE", verbose = FALSE,
+                           from = as.Date("1990-01-01")),
                 silent = TRUE), "try-error"))
 # 9. Combining output ----
 
 cat("\n=== 9. load back, widen, count ===\n")
 unlink(od, recursive = TRUE)
 mb_extract_medication(lmdb2, c("pain","migraine"), codes = codes, outdir = od,
-                   verbose = FALSE)
+                   verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 long <- mb_load_conditions(od)
 ok("2 person-condition rows", nrow(long) == 2)
 wide <- mb_to_wide(long, id_col = "pnr")
@@ -225,7 +275,8 @@ ok("n_records reported",f1$n_records == 3)
 
 cat("\n=== 11. missing prefilter column falls back ===\n")
 lmdb4 <- lmdb[, c("pnr","atc","eksd","year")]
-r4 <- mb_extract_medication(lmdb4, "hypertension", codes = codes, verbose = FALSE)[["hypertension"]]
+r4 <- mb_extract_medication(lmdb4, "hypertension", codes = codes, verbose = FALSE,
+                           from = as.Date("1990-01-01"))[["hypertension"]]
 ok("still finds p1 without atc2", identical(r4$pnr, "p1"))
 # 12. Short codes ----
 
@@ -236,7 +287,8 @@ lmdb5 <- data.frame(pnr = c("z","z"), atc = c("C09AA05","C01DA02"), atc2 = c("C0
                     eksd = as.Date(c("2010-01-01","2010-02-01")), year = 2010,
                     stringsAsFactors = FALSE)
 r5 <- mb_extract_medication(lmdb5, "short_code", codes = rbind(codes, short),
-                         verbose = FALSE)[["short_code"]]
+                         verbose = FALSE,
+                           from = as.Date("1990-01-01"))[["short_code"]]
 ok("2-char code matched via full atc column", nrow(r5) == 1 && r5$pnr == "z")
 # 13. mb_check_codes() ----
 
@@ -255,23 +307,27 @@ jie_atc2 <- list(
   ihd = "C01", diabetes = "A10", thyroid = "H03", pulmonary = "R03",
   allergy = "R06|R01", prostate = "C02|G04", osteoporosis = "M05|G03|H05",
   pain = "N02|M01|M02", migraine = "N02", epilepsy = "N03",
-  distress = "N06", bipolar = "N05", dementia = "N06"
+  bipolar = "N05", dementia = "N06"
+  # distress (N06A) archived out of default LTC set — Sara 2026-09-28
 )
 bad <- character(0)
 for (cond in names(jie_atc2)) {
-  cc <- codes$code[codes$condition == cond & !codes$exclude]
+  # ICD rows now share files with ATC; provenance check is ATC-only
+  cc <- codes$code[codes$condition == cond & !codes$exclude &
+                   codes$vocab_id == "ATC"]
   derived <- sort(unique(substr(cc, 1L, 3L)))
   expected <- sort(unique(strsplit(jie_atc2[[cond]], "|", fixed = TRUE)[[1]]))
   if (!identical(derived, expected)) bad <- c(bad, cond)
 }
-ok("all 15 conditions match Jie's atc2 patterns", length(bad) == 0)
+ok("ATC conditions match Jie's atc2 patterns", length(bad) == 0)
 if (length(bad)) cat("     mismatched:", paste(bad, collapse = ", "), "\n")
 # 15. from/to date window ----
 
-cat("\n=== 15. from/to date window (defaults NULL) ===\n")
-ok("from defaults to NULL", is.null(formals(mb_extract_medication)$from))
+cat("\n=== 15. from/to date window (from required on LMDB) ===\n")
+ok("medication from formal still defaults to NULL (runtime error if left)",
+   is.null(formals(mb_extract_medication)$from))
 ok("to defaults to NULL",   is.null(formals(mb_extract_medication)$to))
-ok("batch from defaults to NULL",
+ok("batch from formal still defaults to NULL (runtime error if left)",
    is.null(formals(mb_extract_medication_batch)$from))
 ok("diagnosis from defaults to NULL",
    is.null(formals(mb_extract_diagnosis)$from))
@@ -279,8 +335,15 @@ ok("diagnosis from defaults to NULL",
 old <- data.frame(pnr = c("o","o"), atc = "C09AA05", atc2 = "C09",
                   eksd = as.Date(c("1995-01-01","1995-06-01")),
                   stringsAsFactors = FALSE)
-ok("default (from/to NULL) keeps the entire register, including 1995",
+ok("NULL from errors on medication extract",
+   inherits(try(mb_extract_medication(old, "hypertension", codes = codes,
+                           verbose = FALSE), silent = TRUE), "try-error"))
+ok("NULL from errors on medication batch extract",
+   inherits(try(mb_extract_medication_batch(old, codes = codes,
+                           verbose = FALSE), silent = TRUE), "try-error"))
+ok("early from keeps the entire register, including 1995",
    nrow(mb_extract_medication(old, "hypertension", codes = codes,
+                           from = as.Date("1990-01-01"),
                            verbose = FALSE)[["hypertension"]]) == 1)
 ok("from = 1997-01-01 drops 1995 dispensings",
    nrow(mb_extract_medication(old, "hypertension", codes = codes,
@@ -557,13 +620,15 @@ if (is.na(pkg_root)) {
   expected <- sort(c(
     "mb_codelist", "mb_write_codelist",
     "mb_inspect_codes", "mb_check_codes",
+    "mb_lookup", "mb_overlap",
     "mb_extract_medication", "mb_extract_medication_batch",
     "mb_extract_diagnosis",
     "mb_merge_conditions", "mb_merge_all",
     "mb_load_conditions", "mb_to_wide",
-    "mb_count_conditions", "mb_prevalence"))
+    "mb_count_conditions", "mb_prevalence",
+    "mb_apply_exclusions"))
 
-  ok("exactly the intended 13 functions are public",
+  ok("exactly the intended 16 functions are public",
      identical(declared, expected))
   if (!identical(declared, expected)) {
     cat("     unexpectedly public:", paste(setdiff(declared, expected), collapse = ", "), "\n")
@@ -575,7 +640,7 @@ if (is.na(pkg_root)) {
      !any(c("mb_extract_one", "mb_diagnose_one", "mb_run_conditions",
             "mb_onset", "mb_pattern", "mb_half",
             "mb_validate_codelist", "mb_condition_logic", "mb_normalize_icd10",
-            "mb_flag_users", "mb_prevalence_all", "mb_overlap", "mb_lookup",
+            "mb_flag_users", "mb_prevalence_all",
             "mb_compare") %in% declared))
 }
 
@@ -595,7 +660,8 @@ rev_lmdb <- data.frame(pnr = c("a","a"), atc = "A10AB01", atc2 = "A10",
 # side files must not be read back as conditions
 sf <- file.path(tempdir(), "sidefiles"); unlink(sf, recursive = TRUE)
 mb_extract_medication(rev_lmdb, codes = rev_codes, outdir = sf,
-                   keep_events = TRUE, verbose = FALSE)
+                   keep_events = TRUE, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("a side file is written", file.exists(file.path(sf, "dm_all_events.rds")))
 back <- mb_load_conditions(sf)
 ok("mb_load_conditions ignores side files",
@@ -652,7 +718,8 @@ prev_lmdb <- data.frame(
 
 pd <- file.path(tempdir(), "prevdisp"); unlink(pd, recursive = TRUE)
 mb_extract_medication(prev_lmdb, codes = prev_codes, outdir = pd,
-                   keep_events = TRUE, verbose = FALSE)
+                   keep_events = TRUE, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 full <- readRDS(file.path(pd, "dm.rds"))
 disp <- readRDS(file.path(pd, "dm_all_events.rds"))
 
@@ -770,13 +837,15 @@ ids_lmdb <- data.frame(pnr = c("a", "b", "c"), atc = "A10AB01",
                        stringsAsFactors = FALSE)
 
 full_result <- mb_extract_medication(ids_lmdb, codes = ids_codes,
-                                     outdir = NULL, verbose = FALSE)$dm
+                                     outdir = NULL, verbose = FALSE,
+                           from = as.Date("1990-01-01"))$dm
 ok("ids = NULL (default) keeps everyone, unchanged",
    setequal(full_result$pnr, c("a", "b", "c")))
 
 restricted <- mb_extract_medication(ids_lmdb, codes = ids_codes,
                                     outdir = NULL, verbose = FALSE,
-                                    ids = c("a", "c"))$dm
+                                    ids = c("a", "c"),
+                           from = as.Date("1990-01-01"))$dm
 ok("ids = restricts to exactly that cohort",
    setequal(restricted$pnr, c("a", "c")))
 ok("a person not in ids never appears, even though they match the codes",
@@ -816,7 +885,8 @@ if (requireNamespace("DBI", quietly = TRUE) &&
 
   lazy_result <- mb_extract_medication(lazy_lmdb, codes = ids_codes,
                                        outdir = NULL, verbose = FALSE,
-                                       ids = c("a", "c"))$dm
+                                       ids = c("a", "c"),
+                           from = as.Date("1990-01-01"))$dm
   ok("mb_extract_medication() against a lazy backend gives the same answer",
      setequal(lazy_result$pnr, c("a", "c")))
 
@@ -852,7 +922,8 @@ pa_lmdb <- data.frame(
 
 pa_dir <- file.path(tempdir(), "prevall"); unlink(pa_dir, recursive = TRUE)
 mb_extract_medication(pa_lmdb, codes = pa_codes, outdir = pa_dir,
-                      keep_events = TRUE, verbose = FALSE)
+                      keep_events = TRUE, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 
 pa_as_of <- as.Date("2006-01-01")
 
@@ -940,9 +1011,11 @@ mb28_lmdb <- data.frame(
 
 ## 28a. matches mb_extract_medication() exactly, on the same data
 mb28_new <- mb_extract_medication_batch(mb28_lmdb, codes = mb28_codes,
-                                        outdir = NULL, verbose = FALSE)
+                                        outdir = NULL, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 mb28_old <- mb_extract_medication(mb28_lmdb, codes = mb28_codes,
-                                  outdir = NULL, verbose = FALSE)
+                                  outdir = NULL, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 for (cond in c("dm", "htn", "pain")) {
   a <- mb28_new[[cond]][order(mb28_new[[cond]]$pnr), ]
   b <- mb28_old[[cond]][order(mb28_old[[cond]]$pnr), ]
@@ -963,7 +1036,8 @@ mb28_lmdb_ex <- data.frame(
   eksd = as.Date(c("2020-01-01","2020-02-01", "2020-01-01","2020-02-01")),
   year = 2020, stringsAsFactors = FALSE)
 mb28_ex <- mb_extract_medication_batch(mb28_lmdb_ex, codes = mb28_codes_ex,
-                                       outdir = NULL, verbose = FALSE)
+                                       outdir = NULL, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("exclude = TRUE removes a code from within its own condition",
    "p1" %in% mb28_ex$ex$pnr && !("p2" %in% mb28_ex$ex$pnr))
 
@@ -974,7 +1048,8 @@ mb28_codes_zero <- data.frame(
 mb28_zero <- mb_extract_medication_batch(mb28_lmdb, conditions = c("dm", "nothing"),
                                          codes = rbind(mb28_codes[mb28_codes$condition == "dm", ],
                                                       mb28_codes_zero["nothing" == mb28_codes_zero$condition, ]),
-                                         outdir = NULL, verbose = FALSE)
+                                         outdir = NULL, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("a condition matching nothing gets a 0-row result, not an error",
    nrow(mb28_zero$nothing) == 0)
 ok("that empty result has the same 8 columns as a real one",
@@ -989,7 +1064,8 @@ mb28_lmdb_na <- data.frame(pnr = c("p1","p1"), atc = c("A10AB01","A10AB01"),
                           year = c(2000,2020), stringsAsFactors = FALSE)
 mb28_na <- mb_extract_medication_batch(mb28_lmdb_na, codes = mb28_codes_na,
                                        outdir = NULL,
-                                       verbose = FALSE)
+                                       verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("window_days = NA - a 20-year gap still qualifies",
    "p1" %in% mb28_na$any$pnr)
 
@@ -1020,19 +1096,22 @@ mb28_lmdb_r <- data.frame(pnr = "p1", atc = "A10AB01",
                          eksd = as.Date("2020-01-01"), year = 2020,
                          stringsAsFactors = FALSE)
 s1 <- mb_extract_medication_batch(mb28_lmdb_r, codes = mb28_codes_r,
-                                  outdir = mb28_dir, verbose = FALSE)
+                                  outdir = mb28_dir, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("first run: both conditions done", all(s1$status == "done"))
 
 s2 <- mb_extract_medication_batch(mb28_lmdb_r, codes = mb28_codes_r,
                                   outdir = mb28_dir, resume = TRUE,
-                                  verbose = FALSE)
+                                  verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("second run: both files exist, whole batch skipped",
    all(s2$status == "skipped"))
 
 unlink(file.path(mb28_dir, "c1.rds"))
 s3 <- mb_extract_medication_batch(mb28_lmdb_r, codes = mb28_codes_r,
                                   outdir = mb28_dir, resume = TRUE,
-                                  verbose = FALSE)
+                                  verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 ok("third run: one file missing, whole batch reruns (not per-condition)",
    all(s3$status == "done"))
 
@@ -1049,9 +1128,11 @@ mb28_lmdb_i <- data.frame(
   eksd = as.Date(c("2020-01-01","2020-02-01","2020-01-01","2020-02-01")),
   year = 2020, stringsAsFactors = FALSE)
 mb_extract_medication(mb28_lmdb_i, conditions = "old_fn", codes = mb28_codes_i,
-                      outdir = mb28_dir2, verbose = FALSE)
+                      outdir = mb28_dir2, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 mb_extract_medication_batch(mb28_lmdb_i, conditions = "new_fn", codes = mb28_codes_i,
-                            outdir = mb28_dir2, verbose = FALSE)
+                            outdir = mb28_dir2, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
 mb28_combined <- mb_load_conditions(mb28_dir2)
 ok("mb_load_conditions() reads output from both extraction functions together",
    setequal(unique(mb28_combined$condition), c("old_fn", "new_fn")))
@@ -1081,7 +1162,8 @@ if (requireNamespace("DBI", quietly = TRUE) &&
        grepl("PARTITION BY", mb28_sql, fixed = TRUE))
 
   mb28_lazy_res <- mb_extract_medication_batch(mb28_lazy_tbl, codes = mb28_codes,
-                                               outdir = NULL, verbose = FALSE)
+                                               outdir = NULL, verbose = FALSE,
+                           from = as.Date("1990-01-01"))
   for (cond in c("dm", "htn", "pain")) {
     a <- mb28_lazy_res[[cond]][order(mb28_lazy_res[[cond]]$pnr), ]
     b <- mb28_new[[cond]][order(mb28_new[[cond]]$pnr), ]

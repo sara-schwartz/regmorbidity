@@ -1,5 +1,10 @@
-"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
-"pulmonary","Chronic pulmonary disease","Pulmonary","ATC","R03A","FALSE","2","365","Adrenergics, inhalants; expanded from R03, dgt_medication.R line 146"
-"pulmonary","Chronic pulmonary disease","Pulmonary","ATC","R03B","FALSE","2","365","Other drugs for obstructive airway diseases, inhalants; expanded from R03, dgt_medication.R line 146"
-"pulmonary","Chronic pulmonary disease","Pulmonary","ATC","R03C","FALSE","2","365","Adrenergics for systemic use; expanded from R03, dgt_medication.R line 146"
-"pulmonary","Chronic pulmonary disease","Pulmonary","ATC","R03D","FALSE","2","365","Other systemic drugs for obstructive airway diseases; expanded from R03, dgt_medication.R line 146"
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+pulmonary,Chronic pulmonary disease,Pulmonary,ATC,R03A,FALSE,2,365,"Adrenergics, inhalants; Prior main = R03"
+pulmonary,Chronic pulmonary disease,Pulmonary,ATC,R03B,FALSE,2,365,"Other drugs for obstructive airway diseases, inhalants; Prior main = R03"
+pulmonary,Chronic pulmonary disease,Pulmonary,ATC,R03C,FALSE,2,365,Adrenergics for systemic use; Prior main = R03
+pulmonary,Chronic pulmonary disease,Pulmonary,ATC,R03D,FALSE,2,365,Other systemic drugs for obstructive airway diseases; Prior main = R03
+pulmonary,Chronic pulmonary disease,Pulmonary,ICD10,J40,FALSE,2,365,optional ICD arm (Anders DECISIONS 6.4 / Prigge COPD); NOT J47/J96 in first pass
+pulmonary,Chronic pulmonary disease,Pulmonary,ICD10,J41,FALSE,2,365,optional ICD arm (Anders DECISIONS 6.4 / Prigge COPD); NOT J47/J96 in first pass
+pulmonary,Chronic pulmonary disease,Pulmonary,ICD10,J42,FALSE,2,365,optional ICD arm (Anders DECISIONS 6.4 / Prigge COPD); NOT J47/J96 in first pass
+pulmonary,Chronic pulmonary disease,Pulmonary,ICD10,J43,FALSE,2,365,optional ICD arm (Anders DECISIONS 6.4 / Prigge COPD); NOT J47/J96 in first pass
+pulmonary,Chronic pulmonary disease,Pulmonary,ICD10,J44,FALSE,2,365,optional ICD arm (Anders DECISIONS 6.4 / Prigge COPD); NOT J47/J96 in first pass

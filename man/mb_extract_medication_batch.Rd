@@ -40,11 +40,13 @@ per-condition resume - see \verb{@details}.}
 \item{id_col, code_col, date_col}{Column names. \code{code_col} must hold the
 \emph{full} ATC code, not a truncated level.}
 
-\item{from, to}{Inclusive date window on \code{date_col} (Date or \code{NULL}).
-Defaults (\code{NULL}, \code{NULL}) keep the entire register. Applied early,
-upstream of every branch and the window-function pass. For LMDB, pass
-\code{from = as.Date("1997-01-01")} to avoid the pre-1997 mother-CPR
-artifact - see \code{\link[=mb_extract_medication]{mb_extract_medication()}} and DECISIONS.md.}
+\item{from}{Inclusive lower date bound on \code{date_col} (\strong{required} \code{Date};
+error if \code{NULL}). Applied early, upstream of every branch and the
+window-function pass. For LMDB pass \code{from = as.Date("1997-01-01")} -
+see \code{\link[=mb_extract_medication]{mb_extract_medication()}} and DECISIONS.md.}
+
+\item{to}{Inclusive upper date bound (\code{Date} or \code{NULL}). \code{NULL} (default)
+= no upper bound.}
 
 \item{dedupe_same_day}{Count several same-day dispensings as one. See
 \code{\link[=mb_flag_users]{mb_flag_users()}}.}

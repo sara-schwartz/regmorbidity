@@ -47,13 +47,16 @@ or \code{NULL} to filter on \code{code_col} directly.}
 \item{prefilter_len}{Characters held by \code{prefilter_col}. Check with
 \code{\link[=mb_inspect_codes]{mb_inspect_codes()}} before trusting it.}
 
-\item{from, to}{Inclusive date window on \code{date_col} (Date or \code{NULL}).
-Defaults (\code{NULL}, \code{NULL}) keep the entire register. Applied early, before
-the code filter and the prescription rule, so a dispensing outside the
-window cannot anchor a qualifying pair. For LMDB, pass
-\code{from = as.Date("1997-01-01")} to avoid the pre-1997 mother-CPR artifact
-(children's prescriptions recorded under the mother's CPR until 1996;
-see DECISIONS.md and ASSUMPTIONS_AND_LIMITATIONS.txt).}
+\item{from}{Inclusive lower date bound on \code{date_col} (\strong{required} \code{Date};
+error if \code{NULL}). Applied early, before the code filter and the
+prescription rule, so a dispensing outside the window cannot anchor a
+qualifying pair. For LMDB pass \code{from = as.Date("1997-01-01")} to avoid
+the pre-1997 mother-CPR artifact (children's prescriptions under the
+mother's CPR until 1996; see DECISIONS.md and
+ASSUMPTIONS_AND_LIMITATIONS.txt).}
+
+\item{to}{Inclusive upper date bound on \code{date_col} (\code{Date} or \code{NULL}).
+\code{NULL} (default) = no upper bound.}
 
 \item{dedupe_same_day, keep_all_users}{Passed to \code{\link[=mb_flag_users]{mb_flag_users()}}.}
 

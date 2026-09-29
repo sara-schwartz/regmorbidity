@@ -3,4 +3,8 @@
 ^ASSUMPTIONS_AND_LIMITATIONS\.txt$
 ^TODO\.txt$
 ^CODELIST_REVIEW\.md$
+^CLAUDE\.md$
+^DECISIONS\.md$
+^METHODS\.md$
 ^_ignore$
+^Codelists$

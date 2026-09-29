@@ -22,11 +22,12 @@ Count how many of the conditions each person has
 }
 \section{What this does not do}{
 
-Conditions are counted independently. There is no composite logic - no
-exclusion of dyslipidemia when IHD is present, no requirement of both a
-diagnosis and a prescription for epilepsy - so a count from here is not
-comparable to a published multimorbidity count. See
-\code{ASSUMPTIONS_AND_LIMITATIONS.txt} section 7 and \code{TODO.txt} section 0(c).
+Conditions are counted independently here. Cross-condition exclusions
+(dyslipidemia unless IHD, approximate hypertension / distress rules) are
+an optional stage-2 pass via \code{\link[=mb_apply_exclusions]{mb_apply_exclusions()}}, not baked into
+extract or this counter. There is still no diagnosis+prescription AND
+logic here - that lives in \code{\link[=mb_merge_conditions]{mb_merge_conditions()}}. See
+\code{ASSUMPTIONS_AND_LIMITATIONS.txt} section 7 and \code{TODO.txt} section 1.
 
 \code{as_of} counts onsets up to a date but cannot express recovery: once a
 condition starts here, it never ends. The Stata original splits follow-up

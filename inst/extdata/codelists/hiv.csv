@@ -1,0 +1,6 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+hiv,HIV/AIDS,Hematological,ICD10,B20,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+hiv,HIV/AIDS,Hematological,ICD10,B21,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+hiv,HIV/AIDS,Hematological,ICD10,B22,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+hiv,HIV/AIDS,Hematological,ICD10,B23,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+hiv,HIV/AIDS,Hematological,ICD10,B24,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28

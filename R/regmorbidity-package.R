@@ -41,6 +41,8 @@
 #'     check that catches a 4-character pattern aimed at a 3-character column}
 #'   \item{[mb_check_codes()]}{do these codes match anything at all, which is
 #'     how a true zero is told from a typo}
+#'   \item{[mb_lookup()]}{which conditions a register code would count as}
+#'   \item{[mb_overlap()]}{codes shared between conditions (QA before counting)}
 #' }
 #'
 #' @section Extraction:
@@ -65,6 +67,8 @@
 #'   \item{[mb_count_conditions()]}{`n_conditions` and `multimorbid`}
 #'   \item{[mb_prevalence()]}{condition status at a point in time, with a
 #'     lookback window, rather than ever-after-onset}
+#'   \item{[mb_apply_exclusions()]}{optional stage-2 Prior exclusion rules on
+#'     an assembled long or wide table (provisional; not baked into extract)}
 #' }
 #'
 #' @section Authors:

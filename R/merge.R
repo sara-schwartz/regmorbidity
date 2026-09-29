@@ -23,8 +23,9 @@
 #   Prior's exclusion rules - dyslipidaemia only if not IHD, hypertension only
 #   if not IHD or heart failure, distress only if no other mental disorder -
 #   reference OTHER conditions and so cannot be applied here, one condition at a
-#   time. They need a pass over the assembled table. Not implemented; see
-#   TODO.txt section 1(b).
+#   time. They need a pass over the assembled table: optional stage-2
+#   mb_apply_exclusions() in R/exclusions.R (provisional; content still open
+#   with Jie - DECISIONS.md 5.1 / TODO.txt section 1).
 #
 # CONTENTS
 #   1. Merging one condition

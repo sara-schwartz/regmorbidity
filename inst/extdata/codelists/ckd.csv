@@ -1,0 +1,2 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+ckd,Chronic kidney disease,Urogenital,ICD10,N18,FALSE,1,,"First-pass core N18 only. Prior also N03,N11,N19 — pending Sara (ship-blocker §6). exclusions.R still names kidney"

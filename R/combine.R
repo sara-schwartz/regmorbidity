@@ -88,14 +88,24 @@ mb_load_conditions <- function(dir, conditions = NULL) {
 #'
 #' @param long Output of [mb_load_conditions()].
 #' @param id_col Person id column name.
-#' @param value Which column to spread: `"onset_date"` (default) or
-#'   `"n_dispensations"`.
+#' @param value Which column to spread: `"onset_date"` (default) or a count
+#'   column. Counts are stored as `"n_records"`; `"n_dispensations"` is
+#'   accepted as an alias for the same column when present under either name.
 #' @return A wide data frame: one row per person, one column per condition.
 #'   `NA` means the person never met that condition's criteria.
 #' @export
 mb_to_wide <- function(long, id_col = "pnr", value = "onset_date") {
 
   stopifnot(is.data.frame(long))
+  # Count column is n_records everywhere; keep n_dispensations as a friendly
+  # alias so older docs / scripts still work.
+  if (!value %in% names(long)) {
+    if (value == "n_dispensations" && "n_records" %in% names(long)) {
+      value <- "n_records"
+    } else if (value == "n_records" && "n_dispensations" %in% names(long)) {
+      value <- "n_dispensations"
+    }
+  }
   for (nm in c(id_col, "condition", value)) {
     if (!nm %in% names(long)) {
       stop("Column '", nm, "' not found in `long`.", call. = FALSE)
@@ -137,11 +147,12 @@ mb_to_wide <- function(long, id_col = "pnr", value = "onset_date") {
 #' @return `wide` with `n_conditions` and `multimorbid` added.
 #'
 #' @section What this does not do:
-#' Conditions are counted independently. There is no composite logic - no
-#' exclusion of dyslipidemia when IHD is present, no requirement of both a
-#' diagnosis and a prescription for epilepsy - so a count from here is not
-#' comparable to a published multimorbidity count. See
-#' `ASSUMPTIONS_AND_LIMITATIONS.txt` section 7 and `TODO.txt` section 0(c).
+#' Conditions are counted independently here. Cross-condition exclusions
+#' (dyslipidemia unless IHD, approximate hypertension / distress rules) are
+#' an optional stage-2 pass via [mb_apply_exclusions()], not baked into
+#' extract or this counter. There is still no diagnosis+prescription AND
+#' logic here - that lives in [mb_merge_conditions()]. See
+#' `ASSUMPTIONS_AND_LIMITATIONS.txt` section 7 and `TODO.txt` section 1.
 #'
 #' `as_of` counts onsets up to a date but cannot express recovery: once a
 #' condition starts here, it never ends. The Stata original splits follow-up

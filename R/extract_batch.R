@@ -206,10 +206,8 @@ mb_batch_query <- function(lmdb, codes, batch, id_col, code_col, date_col,
 
 #' The empty result for one condition, shaped exactly like a real one
 #'
-#' Same idea as mb_null_result() in extract.R, but includes `source` -
-#' mb_null_result() itself does not, which looks like a pre-existing,
-#' unrelated bug (see DECISIONS.md); left as a separate follow-up rather
-#' than fixed here, per the file-separation this was built under.
+#' Empty batch result shaped like a real onset table (includes `source`).
+#' Matches [mb_null_result()] in extract.R.
 #' @keywords internal
 mb_null_result_batch <- function(id_col, condition) {
   out <- data.frame(
@@ -358,11 +356,12 @@ mb_run_batches <- function(batches, worker, outdir, resume, verbose) {
 #'   per-condition resume - see `@details`.
 #' @param id_col,code_col,date_col Column names. `code_col` must hold the
 #'   *full* ATC code, not a truncated level.
-#' @param from,to Inclusive date window on `date_col` (Date or `NULL`).
-#'   Defaults (`NULL`, `NULL`) keep the entire register. Applied early,
-#'   upstream of every branch and the window-function pass. For LMDB, pass
-#'   `from = as.Date("1997-01-01")` to avoid the pre-1997 mother-CPR
-#'   artifact - see [mb_extract_medication()] and DECISIONS.md.
+#' @param from Inclusive lower date bound on `date_col` (**required** `Date`;
+#'   error if `NULL`). Applied early, upstream of every branch and the
+#'   window-function pass. For LMDB pass `from = as.Date("1997-01-01")` -
+#'   see [mb_extract_medication()] and DECISIONS.md.
+#' @param to Inclusive upper date bound (`Date` or `NULL`). `NULL` (default)
+#'   = no upper bound.
 #' @param dedupe_same_day Count several same-day dispensings as one. See
 #'   [mb_flag_users()].
 #' @param ids Restrict to these person ids before anything else runs, via
@@ -437,8 +436,8 @@ mb_extract_medication_batch <- function(lmdb,
     }
   }
 
-  from <- mb_as_bound(from, "from")
-  to   <- mb_as_bound(to,   "to")
+  from <- mb_require_lmdb_from(from)
+  to   <- mb_as_bound(to, "to")
 
   if (!is.null(outdir) && !dir.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)

@@ -1,0 +1,9 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+ulcer,Ulcer/chronic gastritis,Gastrointestinal,ICD10,K221,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+ulcer,Ulcer/chronic gastritis,Gastrointestinal,ICD10,K25,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+ulcer,Ulcer/chronic gastritis,Gastrointestinal,ICD10,K26,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+ulcer,Ulcer/chronic gastritis,Gastrointestinal,ICD10,K27,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+ulcer,Ulcer/chronic gastritis,Gastrointestinal,ICD10,K28,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+ulcer,Ulcer/chronic gastritis,Gastrointestinal,ICD10,K293,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+ulcer,Ulcer/chronic gastritis,Gastrointestinal,ICD10,K294,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+ulcer,Ulcer/chronic gastritis,Gastrointestinal,ICD10,K295,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28

@@ -12,9 +12,9 @@ Description: A general approach to deriving condition indicators, with dates,
     condition if preferred - rather than in code. Medication (ATC) conditions
     require a configurable number of dispensings within a configurable time
     window, and the onset date is the date of the qualifying dispensing.
-    Conditions are extracted one at a time and checkpointed to disk, so a long
-    run over the full register resumes after an interruption instead of
-    starting over. The code lists distributed with the package take their
+    Prefer extracting all conditions in one pass (batch for medications);
+    a sequential, one-condition-at-a-time path with disk checkpoints is
+    available when the cohort or year range is large or raw events are needed. The code lists distributed with the package take their
     starting point in those used by Prior and colleagues (2016)
     <doi:10.1093/aje/kwv324>, and users are expected to revise the code lists
     for their own study.

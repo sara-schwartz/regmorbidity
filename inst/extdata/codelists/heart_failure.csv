@@ -1,0 +1,2 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+heart_failure,Heart failure,Circulatory,ICD10,I50,FALSE,1,,Prior I50 only; I42/I11.0/I13.0/I13.2 out of default first pass (Sara pending)

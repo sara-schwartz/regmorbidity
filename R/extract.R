@@ -64,9 +64,10 @@
 #
 #   prefilter_col = "atc2" ATC level 2, exactly 3 characters (C09, A10, N06).
 #   prefilter_len = 3      verify with mb_inspect_codes() on a new extract.
-#   from / to = NULL       no date window by default (entire register). For
-#                          LMDB, pass from = as.Date("1997-01-01") to avoid
-#                          the pre-1997 mother-CPR artifact - see DECISIONS.md.
+#   from                   REQUIRED Date for LMDB medication extracts (error if
+#                          NULL). Typical: from = as.Date("1997-01-01") for the
+#                          mother-CPR artifact - see DECISIONS.md.
+#   to = NULL              optional upper bound (NULL = no upper bound).
 # 2. Flagging users of one medication ----
 
 #' Flag people who meet a medication criterion
@@ -272,13 +273,15 @@ mb_onset <- function(dt, min_prescriptions, window_days, keep_all = FALSE,
 #'   or `NULL` to filter on `code_col` directly.
 #' @param prefilter_len Characters held by `prefilter_col`. Check with
 #'   [mb_inspect_codes()] before trusting it.
-#' @param from,to Inclusive date window on `date_col` (Date or `NULL`).
-#'   Defaults (`NULL`, `NULL`) keep the entire register. Applied early, before
-#'   the code filter and the prescription rule, so a dispensing outside the
-#'   window cannot anchor a qualifying pair. For LMDB, pass
-#'   `from = as.Date("1997-01-01")` to avoid the pre-1997 mother-CPR artifact
-#'   (children's prescriptions recorded under the mother's CPR until 1996;
-#'   see DECISIONS.md and ASSUMPTIONS_AND_LIMITATIONS.txt).
+#' @param from Inclusive lower date bound on `date_col` (**required** `Date`;
+#'   error if `NULL`). Applied early, before the code filter and the
+#'   prescription rule, so a dispensing outside the window cannot anchor a
+#'   qualifying pair. For LMDB pass `from = as.Date("1997-01-01")` to avoid
+#'   the pre-1997 mother-CPR artifact (children's prescriptions under the
+#'   mother's CPR until 1996; see DECISIONS.md and
+#'   ASSUMPTIONS_AND_LIMITATIONS.txt).
+#' @param to Inclusive upper date bound on `date_col` (`Date` or `NULL`).
+#'   `NULL` (default) = no upper bound.
 #' @param dedupe_same_day,keep_all_users Passed to [mb_flag_users()].
 #' @param keep_events Also write `<condition>_all_events.rds`, the matched
 #'   records before the prescription rule is applied - the equivalent of the
@@ -349,8 +352,8 @@ mb_extract_medication <- function(lmdb,
     }
   }
 
-  from <- mb_as_bound(from, "from")
-  to   <- mb_as_bound(to,   "to")
+  from <- mb_require_lmdb_from(from)
+  to   <- mb_as_bound(to, "to")
 
   if (!is.null(outdir) && !dir.exists(outdir)) {
     dir.create(outdir, recursive = TRUE)
@@ -595,18 +598,21 @@ mb_has_col <- function(x, col) {
 #' The empty result, shaped exactly like a real one
 #'
 #' Returned when a condition matches nothing, so downstream rbind() and column
-#' selection behave the same whether or not anyone had the condition.
+#' selection behave the same whether or not anyone had the condition. Columns
+#' match the non-empty onset schema (including `source`), same as
+#' [mb_null_result_batch()].
 #' @keywords internal
 mb_null_result <- function(id_col, condition, n_codes, pattern,
                            min_prescriptions, window_days) {
   out <- data.frame(
-    id              = character(0),
-    condition       = character(0),
-    onset_date      = as.Date(character(0)),
-    onset_code      = character(0),
-    n_records = integer(0),
-    first_date      = as.Date(character(0)),
-    last_date       = as.Date(character(0)),
+    id         = character(0),
+    condition  = character(0),
+    source     = character(0),
+    onset_date = as.Date(character(0)),
+    onset_code = character(0),
+    n_records  = integer(0),
+    first_date = as.Date(character(0)),
+    last_date  = as.Date(character(0)),
     stringsAsFactors = FALSE
   )
   names(out)[1] <- id_col
@@ -614,6 +620,25 @@ mb_null_result <- function(id_col, condition, n_codes, pattern,
   list(data = out, extra = list(), n_codes = n_codes, pattern = pattern,
        n_rows = 0L, n_persons_any = 0L, n_persons = 0L,
        min_prescriptions = min_prescriptions, window_days = window_days)
+}
+
+
+#' Require a non-NULL `from` Date for LMDB medication extracts
+#'
+#' Soft NULL-with-message was removed (Sara 2026-09-28): callers must pass
+#' an explicit study start. `to` stays optional via [mb_as_bound()].
+#' @keywords internal
+mb_require_lmdb_from <- function(from) {
+  from <- mb_as_bound(from, "from")
+  if (is.null(from)) {
+    stop("`from` is required for LMDB medication extracts (a Date). ",
+         "Pass from = as.Date(\"1997-01-01\") to avoid the pre-1997 ",
+         "mother-CPR artifact, or another study start date. ",
+         "`to` remains optional (NULL = no upper bound). ",
+         "See ?mb_extract_medication and DECISIONS.md.",
+         call. = FALSE)
+  }
+  from
 }
 
 

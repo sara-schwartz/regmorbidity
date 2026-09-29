@@ -1,0 +1,7 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+stroke,Stroke,Circulatory,ICD10,I60,FALSE,1,,"Prior I60–I64,I69 ever; I69 last_5_years optional pending Sara"
+stroke,Stroke,Circulatory,ICD10,I61,FALSE,1,,"Prior I60–I64,I69 ever; I69 last_5_years optional pending Sara"
+stroke,Stroke,Circulatory,ICD10,I62,FALSE,1,,"Prior I60–I64,I69 ever; I69 last_5_years optional pending Sara"
+stroke,Stroke,Circulatory,ICD10,I63,FALSE,1,,"Prior I60–I64,I69 ever; I69 last_5_years optional pending Sara"
+stroke,Stroke,Circulatory,ICD10,I64,FALSE,1,,"Prior I60–I64,I69 ever; I69 last_5_years optional pending Sara"
+stroke,Stroke,Circulatory,ICD10,I69,FALSE,1,,"Prior I60–I64,I69 ever; I69 last_5_years optional pending Sara"

@@ -7,9 +7,7 @@
 mb_null_result_batch(id_col, condition)
 }
 \description{
-Same idea as mb_null_result() in extract.R, but includes \code{source} -
-mb_null_result() itself does not, which looks like a pre-existing,
-unrelated bug (see DECISIONS.md); left as a separate follow-up rather
-than fixed here, per the file-separation this was built under.
+Empty batch result shaped like a real onset table (includes \code{source}).
+Matches \code{\link[=mb_null_result]{mb_null_result()}} in extract.R.
 }
 \keyword{internal}

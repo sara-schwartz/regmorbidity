@@ -1,0 +1,3 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+schizophrenia,Schizophrenia or schizoaffective disorder,Mental,ICD10,F20,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28
+schizophrenia,Schizophrenia or schizoaffective disorder,Mental,ICD10,F25,FALSE,1,,Prior Web Table 1; first-pass 2026-09-28

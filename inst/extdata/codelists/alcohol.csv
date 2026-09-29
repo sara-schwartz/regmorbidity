@@ -1,0 +1,10 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+alcohol,Alcohol problem,Mental,ICD10,F101,FALSE,1,,Prior F101–F109; N07BB NEW skipped (Prior dx-only)
+alcohol,Alcohol problem,Mental,ICD10,F102,FALSE,1,,Prior F101–F109; N07BB NEW skipped (Prior dx-only)
+alcohol,Alcohol problem,Mental,ICD10,F103,FALSE,1,,Prior F101–F109; N07BB NEW skipped (Prior dx-only)
+alcohol,Alcohol problem,Mental,ICD10,F104,FALSE,1,,Prior F101–F109; N07BB NEW skipped (Prior dx-only)
+alcohol,Alcohol problem,Mental,ICD10,F105,FALSE,1,,Prior F101–F109; N07BB NEW skipped (Prior dx-only)
+alcohol,Alcohol problem,Mental,ICD10,F106,FALSE,1,,Prior F101–F109; N07BB NEW skipped (Prior dx-only)
+alcohol,Alcohol problem,Mental,ICD10,F107,FALSE,1,,Prior F101–F109; N07BB NEW skipped (Prior dx-only)
+alcohol,Alcohol problem,Mental,ICD10,F108,FALSE,1,,Prior F101–F109; N07BB NEW skipped (Prior dx-only)
+alcohol,Alcohol problem,Mental,ICD10,F109,FALSE,1,,Prior F101–F109; N07BB NEW skipped (Prior dx-only)

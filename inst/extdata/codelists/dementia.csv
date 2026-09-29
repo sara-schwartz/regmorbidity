@@ -1,2 +1,8 @@
-"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
-"dementia","Dementia","Mental","ATC","N06D",FALSE,2,365,"dgt_medication.R line 310"
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+dementia,Dementia,Mental,ATC,N06D,FALSE,2,365,dgt_medication.R line 310
+dementia,Dementia,Mental,ICD10,F00,FALSE,2,365,"Prior F00–F03, F051, G30; first-pass 2026-09-28 (G31 NEW skipped)"
+dementia,Dementia,Mental,ICD10,F01,FALSE,2,365,"Prior F00–F03, F051, G30; first-pass 2026-09-28 (G31 NEW skipped)"
+dementia,Dementia,Mental,ICD10,F02,FALSE,2,365,"Prior F00–F03, F051, G30; first-pass 2026-09-28 (G31 NEW skipped)"
+dementia,Dementia,Mental,ICD10,F03,FALSE,2,365,"Prior F00–F03, F051, G30; first-pass 2026-09-28 (G31 NEW skipped)"
+dementia,Dementia,Mental,ICD10,F051,FALSE,2,365,"Prior F00–F03, F051, G30; first-pass 2026-09-28 (G31 NEW skipped)"
+dementia,Dementia,Mental,ICD10,G30,FALSE,2,365,"Prior F00–F03, F051, G30; first-pass 2026-09-28 (G31 NEW skipped)"

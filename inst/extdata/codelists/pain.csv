@@ -1,6 +1,6 @@
-"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
-"pain","Painful condition","Musculoskeletal","ATC","N02A",FALSE,4,365,"dgt_medication.R line 221"
-"pain","Painful condition","Musculoskeletal","ATC","N02BA51",FALSE,4,365,"dgt_medication.R line 221"
-"pain","Painful condition","Musculoskeletal","ATC","N02BE",FALSE,4,365,"dgt_medication.R line 221"
-"pain","Painful condition","Musculoskeletal","ATC","M01A",FALSE,4,365,"dgt_medication.R line 221"
-"pain","Painful condition","Musculoskeletal","ATC","M02A",FALSE,4,365,"dgt_medication.R line 221"
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+pain,Painful condition,Musculoskeletal,ATC,N02A,FALSE,4,365,dgt_medication.R line 221; Prior four fills/year
+pain,Painful condition,Musculoskeletal,ATC,N02BA51,FALSE,4,365,dgt_medication.R line 221
+pain,Painful condition,Musculoskeletal,ATC,N02BE,FALSE,4,365,dgt_medication.R line 221
+pain,Painful condition,Musculoskeletal,ATC,M01A,FALSE,4,365,dgt_medication.R line 221
+pain,Painful condition,Musculoskeletal,ATC,M02A,FALSE,4,365,dgt_medication.R line 221; Prior M02A

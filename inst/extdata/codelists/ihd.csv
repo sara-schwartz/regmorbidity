@@ -1,2 +1,8 @@
-"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
-"ihd","Ischemic heart disease","Circulatory","ATC","C01DA",FALSE,2,365,"dgt_medication.R line 94"
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+ihd,Ischemic heart disease,Circulatory,ATC,C01DA,FALSE,2,365,dgt_medication.R line 94
+ihd,Ischemic heart disease,Circulatory,ICD10,I20,FALSE,2,365,Prior I20–I25; first-pass 2026-09-28
+ihd,Ischemic heart disease,Circulatory,ICD10,I21,FALSE,2,365,Prior I20–I25; first-pass 2026-09-28
+ihd,Ischemic heart disease,Circulatory,ICD10,I22,FALSE,2,365,Prior I20–I25; first-pass 2026-09-28
+ihd,Ischemic heart disease,Circulatory,ICD10,I23,FALSE,2,365,Prior I20–I25; first-pass 2026-09-28
+ihd,Ischemic heart disease,Circulatory,ICD10,I24,FALSE,2,365,Prior I20–I25; first-pass 2026-09-28
+ihd,Ischemic heart disease,Circulatory,ICD10,I25,FALSE,2,365,Prior I20–I25; first-pass 2026-09-28

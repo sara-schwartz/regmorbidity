@@ -4,7 +4,7 @@
 \alias{mb_codelist}
 \title{Load a code list}
 \usage{
-mb_codelist(x = NULL, vocab = NULL, validate = TRUE)
+mb_codelist(x = NULL, vocab = NULL, conditions = NULL, validate = TRUE)
 }
 \arguments{
 \item{x}{One of:
@@ -19,6 +19,9 @@ file name is used as the condition (\code{hypertension.csv} -> "hypertension").
 }}
 
 \item{vocab}{Optionally keep only one vocabulary, e.g. \code{"ATC"}.}
+
+\item{conditions}{Optional character vector of condition keys to keep
+after load (\code{NULL} = all). Unknown names are an error.}
 
 \item{validate}{Run \code{\link[=mb_validate_codelist]{mb_validate_codelist()}} before returning. Leave on
 unless you are deliberately inspecting a broken list.}

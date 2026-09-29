@@ -1,0 +1,2 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+anorexia_bulimia,Anorexia/bulimia,Mental,ICD10,F50,FALSE,1,,Prior F50 in main 39; exclusions.R alias eating_disorder; DECISIONS 6.8: not a second category beyond this

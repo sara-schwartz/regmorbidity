@@ -1,0 +1,12 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+liver,Chronic liver disease,Gastrointestinal,ICD10,B16,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,B17,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,B18,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,B19,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,K70,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,K71,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,K72,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,K73,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,K74,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,K766,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"
+liver,Chronic liver disease,Gastrointestinal,ICD10,I85,FALSE,1,,"Prior B16–B19,K70–K74,K766,I85; no B20–B24 (author); K760/K75 NEW skipped"

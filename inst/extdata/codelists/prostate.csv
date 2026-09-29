@@ -1,3 +1,4 @@
-"condition","condition_label","category","vocab_id","code","exclude","min_prescriptions","window_days","note"
-"prostate","Prostate disorder","Urogenital","ATC","C02CA",FALSE,2,365,"dgt_medication.R line 182"
-"prostate","Prostate disorder","Urogenital","ATC","G04C",FALSE,2,365,"dgt_medication.R line 182"
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+prostate,Prostate disorder,Urogenital,ATC,C02CA,FALSE,2,365,dgt_medication.R line 182
+prostate,Prostate disorder,Urogenital,ATC,G04C,FALSE,2,365,dgt_medication.R line 182
+prostate,Prostate disorder,Urogenital,ICD10,N40,FALSE,2,365,Prior N40; first-pass 2026-09-28. Sex-exclude females pending Sara

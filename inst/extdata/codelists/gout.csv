@@ -1,0 +1,3 @@
+condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
+gout,Gout,Endocrine,ICD10,E79,FALSE,1,,"Prior E79,M10 dx-only; M04 NEW skipped"
+gout,Gout,Endocrine,ICD10,M10,FALSE,1,,"Prior E79,M10 dx-only; M04 NEW skipped"

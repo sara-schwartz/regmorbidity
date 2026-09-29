@@ -20,4 +20,3 @@ The question you want answered when a prevalence looks too high. Takes a
 code as it appears in the register - full length, and with the Danish D on
 an ICD-10 code if that is how your data holds it.
 }
-\keyword{internal}
