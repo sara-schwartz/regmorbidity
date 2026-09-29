@@ -29,8 +29,8 @@ hypertension,Hypertension,Circulatory,ATC,C09B,FALSE,2,365,"ACE inhibitors, comb
 hypertension,Hypertension,Circulatory,ATC,C09C,FALSE,2,365,"Angiotensin II receptor blockers (ARBs), plain; expanded from C09"
 hypertension,Hypertension,Circulatory,ATC,C09D,FALSE,2,365,"Angiotensin II receptor blockers (ARBs), combinations; expanded from C09"
 hypertension,Hypertension,Circulatory,ATC,C09X,FALSE,2,365,Other agents acting on the renin-angiotensin system; expanded from C09
-hypertension,Hypertension,Circulatory,ICD10,I10,FALSE,2,365,"Prior I10–I13,I15; first-pass 2026-09-28"
-hypertension,Hypertension,Circulatory,ICD10,I11,FALSE,2,365,"Prior I10–I13,I15; first-pass 2026-09-28"
-hypertension,Hypertension,Circulatory,ICD10,I12,FALSE,2,365,"Prior I10–I13,I15; first-pass 2026-09-28"
-hypertension,Hypertension,Circulatory,ICD10,I13,FALSE,2,365,"Prior I10–I13,I15; first-pass 2026-09-28"
-hypertension,Hypertension,Circulatory,ICD10,I15,FALSE,2,365,"Prior I10–I13,I15; first-pass 2026-09-28"
+hypertension,Hypertension,Circulatory,ICD10,I10,FALSE,2,365,"Prior I10-I13,I15; first-pass 2026-09-28"
+hypertension,Hypertension,Circulatory,ICD10,I11,FALSE,2,365,"Prior I10-I13,I15; first-pass 2026-09-28"
+hypertension,Hypertension,Circulatory,ICD10,I12,FALSE,2,365,"Prior I10-I13,I15; first-pass 2026-09-28"
+hypertension,Hypertension,Circulatory,ICD10,I13,FALSE,2,365,"Prior I10-I13,I15; first-pass 2026-09-28"
+hypertension,Hypertension,Circulatory,ICD10,I15,FALSE,2,365,"Prior I10-I13,I15; first-pass 2026-09-28"

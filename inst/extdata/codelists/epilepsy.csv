@@ -1,4 +1,4 @@
 condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note,logic
-epilepsy,Epilepsy,Neurological,ATC,N03A,FALSE,2,365,Antiepileptics; Prior N03; AND with ICD G40–G41 (DECISIONS 6.2),AND
-epilepsy,Epilepsy,Neurological,ICD10,G40,FALSE,2,365,Prior author clarification G40–G41 only (not G42–G47); AND with N03A,AND
-epilepsy,Epilepsy,Neurological,ICD10,G41,FALSE,2,365,Prior author clarification G40–G41 only (not G42–G47); AND with N03A,AND
+epilepsy,Epilepsy,Neurological,ATC,N03A,FALSE,2,365,Antiepileptics; Prior N03; AND with ICD G40-G41 (DECISIONS 6.2),AND
+epilepsy,Epilepsy,Neurological,ICD10,G40,FALSE,2,365,Prior author clarification G40-G41 only (not G42-G47); AND with N03A,AND
+epilepsy,Epilepsy,Neurological,ICD10,G41,FALSE,2,365,Prior author clarification G40-G41 only (not G42-G47); AND with N03A,AND

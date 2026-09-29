@@ -55,7 +55,7 @@ if (requireNamespace("regmorbidity", quietly = TRUE)) {
                "mb_lookback_days", "mb_rule_batches", "mb_batch_query",
                "mb_is_lazy",
                # demoted from export (DECISIONS.md 1.3); suite still covers them.
-               # mb_overlap / mb_lookup are public again (2026-09-28) — not listed here.
+               # mb_overlap / mb_lookup are public again (2026-09-28) - not listed here.
                "mb_validate_codelist", "mb_condition_logic", "mb_normalize_icd10",
                "mb_flag_users", "mb_prevalence_all", "mb_compare")) {
     assign(nm, get(nm, envir = asNamespace("regmorbidity")))
@@ -316,7 +316,7 @@ jie_atc2 <- list(
   allergy = "R06|R01", prostate = "C02|G04", osteoporosis = "M05|G03|H05",
   pain = "N02|M01|M02", migraine = "N02", epilepsy = "N03",
   bipolar = "N05", dementia = "N06"
-  # distress (N06A) archived out of default LTC set — Sara 2026-09-28
+  # distress (N06A) archived out of default LTC set - Sara 2026-09-28
 )
 bad <- character(0)
 for (cond in names(jie_atc2)) {

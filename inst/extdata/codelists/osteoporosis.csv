@@ -2,6 +2,6 @@ condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,windo
 osteoporosis,Osteoporosis,Musculoskeletal,ATC,M05B,FALSE,2,365,dgt_medication.R line 203
 osteoporosis,Osteoporosis,Musculoskeletal,ATC,G03XC01,FALSE,2,365,dgt_medication.R line 203
 osteoporosis,Osteoporosis,Musculoskeletal,ATC,H05AA,FALSE,2,365,dgt_medication.R line 203
-osteoporosis,Osteoporosis,Musculoskeletal,ICD10,M80,FALSE,2,365,Prior M80–M82; first-pass 2026-09-28
-osteoporosis,Osteoporosis,Musculoskeletal,ICD10,M81,FALSE,2,365,Prior M80–M82; first-pass 2026-09-28
-osteoporosis,Osteoporosis,Musculoskeletal,ICD10,M82,FALSE,2,365,Prior M80–M82; first-pass 2026-09-28
+osteoporosis,Osteoporosis,Musculoskeletal,ICD10,M80,FALSE,2,365,Prior M80-M82; first-pass 2026-09-28
+osteoporosis,Osteoporosis,Musculoskeletal,ICD10,M81,FALSE,2,365,Prior M80-M82; first-pass 2026-09-28
+osteoporosis,Osteoporosis,Musculoskeletal,ICD10,M82,FALSE,2,365,Prior M80-M82; first-pass 2026-09-28

@@ -1,8 +1,8 @@
 condition,condition_label,category,vocab_id,code,exclude,min_prescriptions,window_days,note
 diabetes,Diabetes mellitus,Endocrine,ATC,A10A,FALSE,2,365,dgt_medication.R line 111; Prior A10A
-diabetes,Diabetes mellitus,Endocrine,ATC,A10B,FALSE,2,365,Prior A10B whole class. TODO Sara: A10B carve-outs (PCOS metformin / GLP-1 obesity / SGLT2 HF-CKD) — ship-blocker §1; not applied in first pass
-diabetes,Diabetes mellitus,Endocrine,ICD10,E10,FALSE,2,365,Prior E10–E14; first-pass 2026-09-28
-diabetes,Diabetes mellitus,Endocrine,ICD10,E11,FALSE,2,365,Prior E10–E14; first-pass 2026-09-28
-diabetes,Diabetes mellitus,Endocrine,ICD10,E12,FALSE,2,365,Prior E10–E14; first-pass 2026-09-28
-diabetes,Diabetes mellitus,Endocrine,ICD10,E13,FALSE,2,365,Prior E10–E14; first-pass 2026-09-28
-diabetes,Diabetes mellitus,Endocrine,ICD10,E14,FALSE,2,365,Prior E10–E14; first-pass 2026-09-28
+diabetes,Diabetes mellitus,Endocrine,ATC,A10B,FALSE,2,365,Prior A10B whole class. TODO Sara: A10B carve-outs (PCOS metformin / GLP-1 obesity / SGLT2 HF-CKD) - ship-blocker §1; not applied in first pass
+diabetes,Diabetes mellitus,Endocrine,ICD10,E10,FALSE,2,365,Prior E10-E14; first-pass 2026-09-28
+diabetes,Diabetes mellitus,Endocrine,ICD10,E11,FALSE,2,365,Prior E10-E14; first-pass 2026-09-28
+diabetes,Diabetes mellitus,Endocrine,ICD10,E12,FALSE,2,365,Prior E10-E14; first-pass 2026-09-28
+diabetes,Diabetes mellitus,Endocrine,ICD10,E13,FALSE,2,365,Prior E10-E14; first-pass 2026-09-28
+diabetes,Diabetes mellitus,Endocrine,ICD10,E14,FALSE,2,365,Prior E10-E14; first-pass 2026-09-28
