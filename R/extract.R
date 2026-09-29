@@ -63,7 +63,7 @@
 # the value IS the documentation, and the reasoning lives in @param.
 #
 #   prefilter_col = "atc2" ATC level 2, exactly 3 characters (C09, A10, N06).
-#   prefilter_len = 3      verify with mb_inspect_codes() on a new extract.
+#   prefilter_len = 3      verify with mb_inspect_code_lengths() on a new extract.
 #   from                   REQUIRED Date for LMDB medication extracts (error if
 #                          NULL). Typical: from = as.Date("1997-01-01") for the
 #                          mother-CPR artifact - see DECISIONS.md.
@@ -272,7 +272,7 @@ mb_onset <- function(dt, min_prescriptions, window_days, keep_all = FALSE,
 #' @param prefilter_col Short ATC level column for the pushed-down first stage,
 #'   or `NULL` to filter on `code_col` directly.
 #' @param prefilter_len Characters held by `prefilter_col`. Check with
-#'   [mb_inspect_codes()] before trusting it.
+#'   [mb_inspect_code_lengths()] before trusting it.
 #' @param from Inclusive lower date bound on `date_col` (**required** `Date`;
 #'   error if `NULL`). Applied early, before the code filter and the
 #'   prescription rule, so a dispensing outside the window cannot anchor a

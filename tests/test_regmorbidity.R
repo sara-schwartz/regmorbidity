@@ -627,7 +627,7 @@ if (is.na(pkg_root)) {
 
   expected <- sort(c(
     "mb_codelist",
-    "mb_inspect_codes", "mb_check_codes",
+    "mb_inspect_code_lengths", "mb_check_codes",
     "mb_lookup", "mb_overlap",
     "mb_extract_medication", "mb_extract_medication_batch",
     "mb_extract_diagnosis",

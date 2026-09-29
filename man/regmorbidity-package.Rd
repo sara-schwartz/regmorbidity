@@ -46,22 +46,23 @@ onset \code{.rds}}
 }
 }
 
-\section{QA (optional, before long DST runs)}{
+\section{Preflight QA (optional, before long DST runs)}{
 
 \describe{
-\item{\code{\link[=mb_check_codes]{mb_check_codes()}}}{does each list code match anything in the
-register?}
+\item{\code{\link[=mb_check_codes]{mb_check_codes()}}}{for each list code, count register rows that
+match (prefix); catch typos / dead codes before a long extract}
 \item{\code{\link[=mb_lookup]{mb_lookup()}}}{which conditions claim this code?}
 \item{\code{\link[=mb_overlap]{mb_overlap()}}}{codes shared between conditions}
 }
 }
 
-\section{Advanced / demoted}{
+\section{Advanced}{
 
 \describe{
-\item{\code{\link[=mb_inspect_codes]{mb_inspect_codes()}}}{reports \strong{code column string lengths} in
-the register (e.g. is \code{atc2} 3 chars?). Only needed before sequential
-extract / prefilter debugging. Not list review.}
+\item{\code{\link[=mb_inspect_code_lengths]{mb_inspect_code_lengths()}}}{reports string lengths of code columns
+in the \emph{register} sample (e.g. is \code{atc2} 3 characters?). Use before
+sequential medication extract / prefilter debugging. Not for reviewing
+the code list.}
 }
 }
 

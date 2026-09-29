@@ -53,19 +53,20 @@
 #'     onset `.rds`}
 #' }
 #'
-#' @section QA (optional, before long DST runs):
+#' @section Preflight QA (optional, before long DST runs):
 #' \describe{
-#'   \item{[mb_check_codes()]}{does each list code match anything in the
-#'     register?}
+#'   \item{[mb_check_codes()]}{for each list code, count register rows that
+#'     match (prefix); catch typos / dead codes before a long extract}
 #'   \item{[mb_lookup()]}{which conditions claim this code?}
 #'   \item{[mb_overlap()]}{codes shared between conditions}
 #' }
 #'
-#' @section Advanced / demoted:
+#' @section Advanced:
 #' \describe{
-#'   \item{[mb_inspect_codes()]}{reports **code column string lengths** in
-#'     the register (e.g. is `atc2` 3 chars?). Only needed before sequential
-#'     extract / prefilter debugging. Not list review.}
+#'   \item{[mb_inspect_code_lengths()]}{reports string lengths of code columns
+#'     in the *register* sample (e.g. is `atc2` 3 characters?). Use before
+#'     sequential medication extract / prefilter debugging. Not for reviewing
+#'     the code list.}
 #' }
 #'
 #' @section Provisional:

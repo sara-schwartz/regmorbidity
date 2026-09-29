@@ -1,10 +1,16 @@
 # regmorbidity
 
 Condition indicators, with dates, from Danish register data — defined in
-**editable CSV code lists** rather than in code. It computes no score and is
-not an implementation of the Danish Multimorbidity Index or of any other
-published index. The bundled lists take their starting point in Prior et al.
-(2016) and are a starting point to revise, not an instrument to cite.
+**editable CSV code lists** rather than in code.
+
+**What it is:** load your lists, extract onset dates from LPR (diagnoses) and
+LMDB (medications), merge the halves, and summarise ever-after counts (or
+lookback prevalence on raw events).
+
+**What it is not:** it computes no score and is not an implementation of the
+Danish Multimorbidity Index or of any other published index. The bundled lists
+take their starting point in Prior et al. (2016) and are a starting point to
+revise, not an instrument to cite.
 
 Authors: Jie Zhang, Sara Schwartz (saras@clin.au.dk)
 
@@ -24,114 +30,123 @@ library(regmorbidity)
    `atc`, `eksd`). Medication extractors **require** `from` (recommend
    `from = as.Date("1997-01-01")` unless you have handled the pre-1997
    mother-CPR issue another way).
-3. Code lists — `mb_codelist()` (bundled: **ATC + first-pass ICD**; distress
-   archived out of the default set) or your own CSVs.
+3. **Code lists** — `mb_codelist()` (bundled: **ATC + first-pass ICD**;
+   distress archived out of the default set) or your own CSVs.
 
-## Real register data: parquet + DuckDB
+## Parquet + DuckDB
 
 For real register work, use **parquet** and open it through raw DuckDB + DBI +
-`dbplyr`; do not load a SAS register into R's memory. In particular,
-`mb_extract_medication_batch()` and the medication DuckDB path need a `dbplyr`
-`tbl_lazy` made from a plain `DBI::dbConnect(duckdb::duckdb())` connection and
-`dplyr::tbl(con, ...)`:
+`dbplyr`; do not load a SAS register into R's memory. Medication batch needs a
+`dbplyr` `tbl_lazy` from a plain `DBI::dbConnect(duckdb::duckdb())` connection:
 
 ```r
-library(DBI)
-library(duckdb)
-library(dplyr)
+library(DBI); library(duckdb); library(dplyr)
 
 con <- dbConnect(duckdb())
-# path = folder of parquet files for LMDB (or LPR)
 dbExecute(con, "CREATE VIEW lmdb AS SELECT * FROM read_parquet('path/to/lmdb/**/*.parquet')")
 lmdb <- tbl(con, "lmdb")
-
-# Then use the lazy table, for example:
-# mb_extract_medication_batch(lmdb, codes = rx_codes, ...)
+# same pattern for LPR → tbl(con, "lpr")
 # dbDisconnect(con, shutdown = TRUE) when done
 ```
 
-For LPR, create an `lpr` view from the LPR parquet folder and use
-`tbl(con, "lpr")` in the same way. Diagnosis has no `window_order()` rule, but
-this opening pattern is still recommended for consistency and RAM use. For a
-real run, install the packages used here (`duckdb`, `DBI`, `dbplyr`, and
-`arrow`). Small in-memory data frames still work for tiny/toy runs, as in the
-vignette; use DuckDB + parquet for a real LMDB.
+Do **not** feed medication extractors with `duckplyr::read_parquet_duckdb()` or
+`fastreg::read_register()`. `fastreg` is still useful for SAS→parquet setup:
+[fastreg](https://dp-next.github.io/fastreg/). Tiny in-memory frames work for
+toy runs (see the vignette).
 
-Do **not** feed medication extractors with
-`duckplyr::read_parquet_duckdb()` or `fastreg::read_register()`; those are not
-the supported path for medication extracts. `fastreg` is useful for converting
-SAS to parquet and setting up a project layout: [fastreg](https://dp-next.github.io/fastreg/),
-specifically [Getting started](https://dp-next.github.io/fastreg/articles/fastreg.html).
+## Happy path
 
-## Quick start
-
-Fifteen exports. Prefer this path; see **Functions** below for the rest.
+Fifteen exports. Numbered steps below; full inventory in the next section.
 
 ```r
 library(regmorbidity)
 
-# For real parquet-backed registers, define lpr/lmdb as shown above.
-# The vignette uses tiny in-memory toy tables instead.
-
+# 1. Load lists
 rx_codes <- mb_codelist(vocab = "ATC")
 dx_codes <- mb_codelist(conditions = "hypertension", vocab = "ICD10")
 
+# 2. Extract diagnoses (LPR)
 mb_extract_diagnosis(
-  lpr,
-  codes  = dx_codes,
-  outdir = "data/dx",
-  from   = as.Date("1995-01-01")   # example window; set to your study
+  lpr, codes = dx_codes, outdir = "data/dx",
+  from = as.Date("1995-01-01")
 )
 
+# 3. Extract medications — prefer batch
 mb_extract_medication_batch(
-  lmdb,
-  codes  = rx_codes,
-  outdir = "data/rx",
-  from   = as.Date("1997-01-01")
+  lmdb, codes = rx_codes, outdir = "data/rx",
+  from = as.Date("1997-01-01")
 )
 
+# 4. Combine dx + rx extract directories → long
 long <- mb_merge_all("data/dx", "data/rx")
+
+# 5. Analyse
 wide <- mb_to_wide(long)
 mb_count_conditions(wide, as_of = "2015-01-01")
 ```
 
-Sequential extract, `keep_events`, and prevalence:
-`vignette("regmorbidity")`.
+For sequential extract, `keep_events`, prevalence lookback, exclusion timing,
+and a worked miniature: `vignette("regmorbidity")`.
 
-## Functions
+## All functions
 
-**Happy path (loud)**
+Pedagogical order. One sentence each — **when to use**.
 
-1. `mb_codelist` — load/filter lists (`conditions=`, `vocab=`)
-2. `mb_extract_diagnosis` — LPR onset
-3. `mb_extract_medication_batch` — preferred medication onset (SQL, low RAM)
-4. `mb_merge_all` — combine dx+rx extract directories → long
-5. `mb_to_wide` → `mb_count_conditions` — ever-after counts as of a date
+### Load list
 
-**Backup / special**
+- **`mb_codelist`** — load and filter code lists (`conditions=`, `vocab=`);
+  start here before any extract or QA.
 
-- `mb_extract_medication` — sequential; use when you need `keep_events=TRUE` or one-condition debug
-- `mb_merge_conditions` — merge one condition’s two data frames (in memory)
-- `mb_load_conditions` — load one extract outdir to long (skips `*_all_events.rds`); medication-only studies
-- `mb_prevalence` — lookback prevalence on **raw events**, not onset `.rds`
+### Preflight QA
 
-**QA (optional, before long DST runs)**
+- **`mb_check_codes`** — for each code in your list, count how many register
+  rows match (prefix); optional preflight before a long DST extract to catch
+  typos / dead codes that would give silent zeros.
+- **`mb_lookup`** — which conditions in the list claim this code?
+- **`mb_overlap`** — which codes are shared between conditions?
+- **`mb_inspect_code_lengths`** *(advanced)* — reports string lengths of code
+  columns in the *register* sample (e.g. whether `atc2` is 3 characters);
+  use before sequential medication extract / prefilter debugging — **not** for
+  reviewing the code list.
 
-- `mb_check_codes` — does each list code match anything in the register?
-- `mb_lookup` — which conditions claim this code?
-- `mb_overlap` — codes shared between conditions
+### Extract
 
-**Advanced / demoted**
+- **`mb_extract_diagnosis`** — LPR onset: one matching diagnosis is the
+  condition; write one onset `.rds` per condition.
+- **`mb_extract_medication_batch`** — **prefer** this for medication onset
+  (one SQL pass, low RAM); does not keep raw events.
+- **`mb_extract_medication`** — sequential backup; use when you need
+  `keep_events = TRUE` (prevalence / debug) or one-condition disk checkpoints.
 
-- `mb_inspect_codes` — reports **code column string lengths** in the register (e.g. is `atc2` 3 chars?). Only needed before sequential extract / prefilter debugging. Not list review.
+### Combine
 
-**Provisional**
+- **`mb_merge_all`** — combine diagnosis + medication extract directories into
+  one long table (happy-path merge).
+- **`mb_merge_conditions`** — merge one condition’s two in-memory data frames
+  (OR/AND / optional `logic` column).
+- **`mb_load_conditions`** — load one extract outdir to long (skips
+  `*_all_events.rds`); use for medication-only studies.
 
-- `mb_apply_exclusions` — optional stage-2; incomplete vs Prior; not happy path. HTN still has C03 / HF / CKD gaps.
+### Analyse
+
+- **`mb_to_wide`** — long onset table → one row per person, one column per
+  condition (onset dates).
+- **`mb_count_conditions`** — ever-after condition counts as of a date (once
+  met, always met).
+- **`mb_prevalence`** — lookback prevalence on **raw events**, not onset
+  `.rds`; needs events from sequential extract with `keep_events = TRUE`.
+
+### Provisional
+
+- **`mb_apply_exclusions`** — optional stage-2 Prior-style exclusions;
+  incomplete vs Prior; not on the happy path (HTN still has C03 / HF / CKD
+  gaps).
 
 ## More detail
 
-`vignette("regmorbidity")` — sequential extract, `keep_events`, prevalence, QA.
+`vignette("regmorbidity")` — worked miniature, batch vs sequential +
+`keep_events`, `mb_check_codes` example, prevalence, merge logic, exclusion
+timing, and why `mb_inspect_code_lengths` exists.
 
 `?regmorbidity` — all 15 exported functions.
 

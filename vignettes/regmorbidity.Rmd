@@ -22,33 +22,14 @@ data — hospital diagnoses (LPR) and dispensings (LMDB) — using editable CSV
 code lists rather than hard-coded rules. It computes no score and is not an
 implementation of any published multimorbidity index.
 
-The public surface is **15 exported functions**. Prefer the happy path below;
-backup / QA / advanced / provisional functions are listed at the end of this
-section and used only where noted.
+The public surface is **15 exported functions**. The README is the inventory
+and happy-path one-liners; this vignette owns the worked examples and the
+decisions the README only points at (batch vs sequential, `keep_events`,
+prevalence lookback, inspect lengths, exclusion timing).
 
-**Happy path (loud)**
-
-1. `mb_codelist` — load/filter lists (`conditions=`, `vocab=`)
-2. `mb_extract_diagnosis` — LPR onset
-3. `mb_extract_medication_batch` — preferred medication onset (SQL, low RAM)
-4. `mb_merge_all` — combine dx+rx extract directories → long
-5. `mb_to_wide` → `mb_count_conditions` — ever-after counts as of a date
-
-**Backup / special:** `mb_extract_medication` (sequential; `keep_events` /
-one-condition debug), `mb_merge_conditions` (one condition in memory),
-`mb_load_conditions` (one extract outdir → long; medication-only),
-`mb_prevalence` (lookback on **raw events**, not onset `.rds`).
-
-**QA:** `mb_check_codes`, `mb_lookup`, `mb_overlap`.
-
-**Advanced:** `mb_inspect_codes` — code column string lengths in the register
-(prefilter debugging only; not list review).
-
-**Provisional:** `mb_apply_exclusions` — optional stage-2; incomplete vs Prior.
-
-Output is onset-only by default. Design notes
-(`ASSUMPTIONS_AND_LIMITATIONS.txt`, `DECISIONS.md`) live in the source working
-tree if present; otherwise use this vignette and `?regmorbidity`.
+**Use `mb_codelist` when** you need to load or filter lists before extract or
+QA (`conditions=`, `vocab=`). Bundled lists are **ATC + first-pass ICD**
+(distress archived out of the default set).
 
 ## What you supply
 
@@ -58,10 +39,9 @@ tree if present; otherwise use this vignette and `?regmorbidity`.
 2. **LMDB**: person id, **full** ATC, dispensing date (defaults: `pnr`,
    `atc`, `eksd`). An optional short ATC column (e.g. `atc2`) is used only by
    the sequential medication extractor as a pushed-down prefilter.
-3. **A code list** via `mb_codelist()` — bundled lists are **ATC + first-pass
-   ICD** (distress archived out of the default set). Filter with
-   `conditions=` and/or `vocab=` (e.g. `vocab = "ICD10"` for diagnosis,
-   `vocab = "ATC"` for medication).
+3. **A code list** via `mb_codelist()` — filter with `conditions=` and/or
+   `vocab=` (e.g. `vocab = "ICD10"` for diagnosis, `vocab = "ATC"` for
+   medication).
 
 Date windows use inclusive `from` / `to`. On LMDB medication extractors,
 `from` is **required** (error if omitted/`NULL`); `to` is optional. Prefer
@@ -69,35 +49,20 @@ Date windows use inclusive `from` / `to`. On LMDB medication extractors,
 mother-CPR artifact another way. Diagnosis extract may still omit `from`
 (entire register).
 
-### Preflight (optional, before a long DST run)
+## Preflight QA
 
-Lead with whether list codes hit anything in the register:
+**Use `mb_check_codes` when** you want an optional preflight before a long
+DST extract: for each code in your list, it counts how many register rows
+match (prefix match, same as the extractors). Typos, retired codes, or a
+missing ATC chapter otherwise give silent zeros.
 
-```{r, eval = FALSE}
-mb_check_codes(lpr, dx_codes)
-mb_check_codes(lmdb, rx_codes)
-mb_lookup("C02CA01")          # which conditions claim this code?
-mb_overlap(vocab = "ATC")     # codes shared between conditions
-```
+**Use `mb_lookup` when** you need to see which conditions claim a given code.
 
-#### Advanced: column lengths
-
-`mb_inspect_codes()` reports **code column string lengths** in the register
-(e.g. is `atc2` 3 chars?). Only needed before sequential extract / prefilter
-debugging. Not list review.
-
-```{r, eval = FALSE}
-mb_inspect_codes(lmdb)
-mb_inspect_codes(lpr)
-```
-
-## Happy path
-
-Extractors take the code list and write one onset `.rds` per condition.
-Diagnoses first, then medications (batch), then merge.
+**Use `mb_overlap` when** you want codes shared between conditions (nesting
+is not automatically wrong, but dual-counting should be deliberate).
 
 ```{r}
-# Tiny synthetic registers for this vignette only
+# Tiny synthetic registers for this vignette
 lpr <- data.frame(
   pnr      = c("1", "2", "3"),
   C_DIAG   = c("DI10", "DI10", "DE11"),
@@ -107,67 +72,94 @@ lpr <- data.frame(
 lmdb <- data.frame(
   pnr  = c("1", "1", "2", "2", "3"),
   atc  = c("C09AA02", "C09AA02", "C09AA02", "C09AA02", "A10BA02"),
+  atc2 = c("C09", "C09", "C09", "C09", "A10"),
   eksd = as.Date(c("2010-01-01", "2010-03-01",
                    "2011-01-01", "2011-04-01", "2012-01-01")),
   stringsAsFactors = FALSE
 )
-```
 
-```{r, eval = FALSE}
-dx_codes <- mb_codelist(conditions = "hypertension", vocab = "ICD10")
-rx_codes <- mb_codelist(vocab = "ATC")
-
-mb_extract_diagnosis(
-  lpr,
-  codes  = dx_codes,
-  outdir = "data/dx",
-  from   = as.Date("1995-01-01")
-)
-
-mb_extract_medication_batch(
-  lmdb,
-  codes  = rx_codes,
-  outdir = "data/rx",
-  from   = as.Date("1997-01-01")
-)
-
-# Merge returns a long data frame. mb_load_conditions() is for one extract
-# outdir when you are not merging (e.g. medication-only).
-long <- mb_merge_all("data/dx", "data/rx")
-wide <- mb_to_wide(long)
-mb_count_conditions(wide, as_of = "2015-01-01")
-```
-
-### Worked miniature (in memory, one condition)
-
-Uses `mb_merge_conditions()` — the in-memory, one-condition backup — so the
-vignette stays file-free and evaluable:
-
-```{r}
-dx_codes <- mb_codelist(data.frame(
-  condition = "hypertension", vocab_id = "ICD10", code = "I10",
-  exclude = FALSE, stringsAsFactors = FALSE
-))
 rx_codes <- mb_codelist(data.frame(
   condition = "hypertension", vocab_id = "ATC", code = "C09",
   exclude = FALSE, min_prescriptions = 2L, window_days = 365L,
   stringsAsFactors = FALSE
 ))
+dx_codes <- mb_codelist(data.frame(
+  condition = "hypertension", vocab_id = "ICD10", code = "I10",
+  exclude = FALSE, stringsAsFactors = FALSE
+))
 
+# Worked example: each list code → match count in the register
+mb_check_codes(lmdb, rx_codes, code_col = "atc")
+```
+
+A zero here means the extractor would also return empty for that code — fix
+the list (or the register window) before a multi-hour DST run.
+
+```{r, eval = FALSE}
+mb_lookup("C02CA01")          # which conditions claim this code?
+mb_overlap(vocab = "ATC")     # codes shared between conditions
+```
+
+### Advanced: column string lengths in the register
+
+**Use `mb_inspect_code_lengths` when** you are about to run the *sequential*
+medication extractor with a short prefilter column and need to confirm that
+column’s string lengths in the *register* (sample) — e.g. whether `atc2` is
+really 3 characters. This is **not** for reviewing the code list; that is
+`mb_check_codes`.
+
+Why it exists: the sequential path can push a coarse filter on `atc2` with
+`prefilter_len = 3`. If `atc2` is not 3 characters (or is missing), that
+prefilter silently matches nothing.
+
+```{r}
+mb_inspect_code_lengths(lmdb, cols = c("atc", "atc2"))
+```
+
+## Worked miniature (happy path in memory)
+
+**Use `mb_extract_diagnosis` when** you have LPR and want onset from one
+matching diagnosis.
+
+**Use `mb_extract_medication_batch` when** you want medication onset for many
+conditions in one low-RAM SQL pass (preferred path; no raw events kept).
+
+**Use `mb_merge_conditions` when** you already have two in-memory halves for
+*one* condition (vignette / debug). **Use `mb_merge_all` when** you have two
+extract directories from a real run.
+
+**Use `mb_to_wide` when** you need one row per person and one onset-date
+column per condition. **Use `mb_count_conditions` when** you want ever-after
+counts as of a date (once met, always met).
+
+```{r}
 dx <- mb_extract_diagnosis(lpr, codes = dx_codes, outdir = NULL,
                            verbose = FALSE)
 rx <- mb_extract_medication_batch(lmdb, codes = rx_codes, outdir = NULL,
                                   from = as.Date("1997-01-01"),
                                   verbose = FALSE)
 
-merged <- mb_merge_conditions(dx$hypertension, rx$hypertension)
+# OR = earlier of dx/rx; AND = both required, later date.
+# An optional `logic` column in the code list can set this per condition.
+merged <- mb_merge_conditions(dx$hypertension, rx$hypertension, logic = "OR")
 wide <- mb_to_wide(merged)
 mb_count_conditions(wide, as_of = "2015-01-01")
 ```
 
+Directory form of the same pipeline (not evaluated here):
+
+```{r, eval = FALSE}
+mb_extract_diagnosis(lpr, codes = dx_codes, outdir = "data/dx",
+                     from = as.Date("1995-01-01"))
+mb_extract_medication_batch(lmdb, codes = rx_codes, outdir = "data/rx",
+                            from = as.Date("1997-01-01"))
+long <- mb_merge_all("data/dx", "data/rx")
+wide <- mb_to_wide(long)
+mb_count_conditions(wide, as_of = "2015-01-01")
+```
+
 For a study cohort rather than everyone in the register, pass `ids` on the
-extract call. That is a join against the lazy connection, not a written-out
-id list.
+extract call (a join against the lazy connection, not a written-out id list):
 
 ```{r, eval = FALSE}
 mb_extract_medication_batch(lmdb, codes = rx_codes, outdir = "data/rx",
@@ -175,48 +167,53 @@ mb_extract_medication_batch(lmdb, codes = rx_codes, outdir = "data/rx",
                             ids = cohort$pnr)
 ```
 
-## Diagnosis and merge
+**Use `mb_load_conditions` when** you have one extract outdir and are not
+merging (e.g. medication-only). It skips `*_all_events.rds` automatically.
 
-`mb_extract_diagnosis()` needs no prescription rule: one matching diagnosis
-is the condition, and onset is the earliest date. Feed it **one** already-
-combined LPR table. Prefer ICD rows via
-`mb_codelist(conditions = ..., vocab = "ICD10")`.
+```{r, eval = FALSE}
+long_rx_only <- mb_load_conditions("data/rx")
+```
 
-`"OR"` (default) in merge takes whichever of diagnosis / medication came
-first; `"AND"` requires both and takes the later date. Which applies can
-come from an optional `logic` column in the code list.
-`mb_merge_all()` walks a pair of extract directories (happy path).
-`mb_merge_conditions()` merges one condition’s two data frames in memory.
+## Batch vs sequential (and `keep_events`)
+
+Prefer **batch** for medication onset: one SQL pass, low RAM, same onset
+`.rds` shape as sequential.
+
+Switch to **sequential** (`mb_extract_medication`) when:
+
+1. you need **raw events** for prevalence (`keep_events = TRUE`), or
+2. you want one-condition disk checkpoints / resume on a awkward cohort or
+   year range.
+
+**Why the RAM story matters:** batch never materialises matching dispensings
+in R; it asks DuckDB for the onset only. Sequential walks conditions (with
+optional prefilter on `atc2`), and with `keep_events = TRUE` it also writes
+`<condition>_all_events.rds` beside the onset file. Batch has no equivalent
+side file — so prevalence cannot be fed from a batch-only outdir.
+
+Both write the same onset `.rds` shape, so merge / load / wide / count stay
+unchanged.
 
 ## Medication rules in brief
 
 Medication conditions usually need more than one dispensing. The code list
 carries `min_prescriptions` and `window_days` (often 2 within 365 days).
 Same-day dispensings are de-duplicated by default
-(`dedupe_same_day = TRUE`), so two packages on one pharmacy visit count as
-one event. Leaving `window_days` as `NA` means any distance apart.
+(`dedupe_same_day = TRUE`). Leaving `window_days` as `NA` means any distance
+apart.
 
 Three settings that change counts:
 
-- **`from` / `to`** — inclusive window. On LMDB medication extractors
-  `from` is required; `to` optional (`NULL` = no upper bound). Prefer
-  `from = as.Date("1997-01-01")` on LMDB (mother-CPR artifact).
+- **`from` / `to`** — inclusive. On LMDB, `from` is required; prefer
+  `from = as.Date("1997-01-01")`.
 - **`dedupe_same_day`** — default `TRUE`.
-- **`window_days` / `min_prescriptions`** — from the code list, overridable
-  on the extract call where the API allows.
+- **`window_days` / `min_prescriptions`** — from the code list.
 
-## Ever/never, or a lookback (batch ≠ events)
+## Prevalence on raw events
 
-`mb_count_conditions()` counts a condition from its onset date on: once met,
-always met (as of the date you pass). State that estimand wherever you
-report a number.
-
-If you need "still evidence within the last N days", use `mb_prevalence()`
-on **raw matching records**, not onset-only `.rds`.
-
-**Batch does not collect raw rows.** `mb_extract_medication_batch()` writes
-onset only. To keep events for prevalence (or one-condition debug), use the
-sequential extractor:
+`mb_count_conditions()` is ever-after from onset. **Use `mb_prevalence` when**
+you need "still evidence within the last N days" on **raw matching records**,
+not onset-only `.rds`.
 
 ```{r}
 outdir <- tempfile()
@@ -229,37 +226,35 @@ mb_prevalence(disp, as_of = "2011-01-01", lookback = 365,
              min_prescriptions = 2, window_days = 365)
 ```
 
-- `keep_events = TRUE` writes `<condition>_all_events.rds` beside the onset
-  file. Batch has no equivalent.
+- `keep_events = TRUE` writes `<condition>_all_events.rds`. Batch has no
+  equivalent.
 - With `outdir = NULL`, side files are not written.
 - `lookback = Inf` matches `mb_count_conditions(as_of = )`.
-- `mb_load_conditions()` skips `*_all_events.rds` automatically.
 
-Prefer the full-list / batch path. Switch to sequential when you need
-`keep_events`, or when the population / year range makes a full-list pass
-awkward. Both write the same onset `.rds` shape, so merge / load / wide /
-count stay unchanged.
+## Merge logic (OR / AND)
 
-## Code-list overlaps (QA)
-
-Some bundled ATC ranges nest (e.g. hypertension `C02C` and prostate
-`C02CA`). An overlap is not automatically wrong, but one dispensing
-creating two conditions should be a deliberate choice:
-
-```{r, eval = FALSE}
-mb_overlap()              # all vocabs in the list
-mb_overlap(vocab = "ATC")
-mb_lookup("C02CA01")      # which conditions claim a code
-```
+`"OR"` (default) takes whichever of diagnosis / medication came first;
+`"AND"` requires both and takes the later date. Which applies can come from
+an optional `logic` column in the code list. `mb_merge_all()` walks a pair of
+extract directories; `mb_merge_conditions()` merges one condition’s two data
+frames in memory (as in the miniature above).
 
 ## Optional: Prior exclusion rules (provisional)
 
-Extraction does **not** apply Prior's cross-condition exclusions. After you
-have a long or wide onset table, you can optionally call
-`mb_apply_exclusions()` — provisional; incomplete vs Prior; not on the happy
-path. Distress was dropped from the default lists, so do not lean on distress
-arms here. Hypertension still has gaps around C03 / heart failure / CKD
-relative to a full Prior-style exclusion set.
+Extraction does **not** apply Prior's cross-condition exclusions.
+
+**Use `mb_apply_exclusions` when** you already have a long or wide onset
+table and want an optional stage-2 pass — provisional; incomplete vs Prior;
+not on the happy path. Distress was dropped from the default lists.
+Hypertension still has gaps around C03 / heart failure / CKD.
+
+Timing options (pass via `timing=`):
+
+- **`"as_of"`** — default when `as_of` is given: apply exclusions relative to
+  that date.
+- **`"onset_order"`** — order by onset dates among conditions present.
+- **`"ever_ever"`** — if both conditions ever appear, apply the exclusion
+  regardless of timing.
 
 ```{r, eval = FALSE}
 # long from mb_merge_all() / mb_load_conditions(), or wide from mb_to_wide()
@@ -269,7 +264,7 @@ long2 <- mb_apply_exclusions(long, as_of = as.Date("2015-01-01"))
 
 ## Where to read more
 
-`?regmorbidity` — all 15 exports in the same tiers.
+`?regmorbidity` and the README — all 15 exports as one-liners / tiers.
 
 In the source working tree if present (often gitignored / local):
 

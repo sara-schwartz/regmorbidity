@@ -2,7 +2,7 @@
 % Please edit documentation in R/inspect.R
 \name{mb_check_codes}
 \alias{mb_check_codes}
-\title{Check a code list against the codes actually present in the register}
+\title{Count register matches for each code in your code list}
 \usage{
 mb_check_codes(
   lmdb,
@@ -12,22 +12,32 @@ mb_check_codes(
 )
 }
 \arguments{
-\item{lmdb}{The dispensing register.}
+\item{lmdb}{The dispensing register (or LPR if \code{code_col} is a diagnosis
+column).}
 
 \item{codes}{A code list.}
 
-\item{code_col}{Full ATC column name.}
+\item{code_col}{Full code column name in the register (default \code{"atc"}).}
 
 \item{conditions}{Conditions to check. \code{NULL} = all.}
 }
 \value{
-A data frame with one row per code and the number of dispensings it
-matches.
+A data frame with one row per list code and the number of register
+rows it matches.
 }
 \description{
-Finds codes that match nothing at all: a typo, a code retired before the
-study period, a drug never marketed in Denmark, or a whole ATC chapter
-missing from the extract. The Stata original notes that chapters S and V were
-absent from its data, which is why glaucoma came back empty there - a fact
-invisible from the result alone.
+\strong{What:} for each code in your code list, count how many register rows match
+(prefix match, the same way the extractors match).
+}
+\details{
+\strong{When:} optional preflight before a long DST extract - catch typos / dead
+codes that would otherwise give silent zeros (a typo, a code retired before
+the study period, a drug never marketed in Denmark, or a whole ATC chapter
+missing from the extract).
+
+\strong{Input:} register + code list. \strong{Output:} one row per list code with the
+match count (\code{n_dispensings} / \code{found}).
+
+Not the same as \code{\link[=mb_inspect_code_lengths]{mb_inspect_code_lengths()}}, which reports string lengths of
+code \emph{columns in the register}, not whether list codes hit anything.
 }

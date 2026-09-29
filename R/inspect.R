@@ -7,17 +7,17 @@
 #   nobody has and a condition whose codes match nothing both come back as an
 #   empty file, with no error and no warning.
 #
-# INPUT   the dispensing register, and (for mb_check_codes) a code list
+# INPUT   the register, and (for mb_check_codes) a code list
 # OUTPUT  printed diagnostics and a small data frame; nothing is written
 #
 # WHEN TO RUN THEM
-#   mb_inspect_codes()  once per new extract, before anything else
-#   mb_check_codes()    whenever a code list is edited, and before interpreting
-#                       any zero
+#   mb_check_codes()           optional preflight before a long extract
+#   mb_inspect_code_lengths()  advanced: before sequential extract / prefilter
+#                              debugging (column string lengths in the register)
 #
 # CONTENTS
 #   1. Constants
-#   2. Column shape
+#   2. Column string lengths in the register
 #   3. Code list against the register
 # .............................................................................
 # 1. Constants ----
@@ -30,25 +30,33 @@ MB_INSPECT_SAMPLE_ROWS <- 1e5
 # Columns shorter than this cannot hold a full ATC code, so matching a real code
 # against them is guaranteed to fail.
 MB_SHORT_COLUMN_NCHAR <- 3L
-# 2. Column shape ----
+# 2. Column string lengths in the register ----
 
-#' Report how long the code columns actually are
+#' Report string lengths of code columns in the register
+#'
+#' Reports how long the values in code columns of the *register* (a sample) actually
+#' are - e.g. whether `atc2` is 3 characters. Use this before sequential
+#' medication extract / prefilter debugging, when you need to confirm that a
+#' short column really holds the length your `prefilter_len` assumes.
+#'
+#' This is **not** for reviewing the code list. For "does each list code match
+#' any register rows?", use [mb_check_codes()].
 #'
 #' The failure this catches is silent. `atc2` holds 3 characters, so
 #' `grepl("N02A", atc2)` matches nothing, raises no error, and returns an empty
-#' result that reads as a finding. Run this once on any new extract and confirm
-#' the lengths are what the code lists assume.
+#' result that reads as a finding.
 #'
-#' @param lmdb The dispensing register (lazy table or data frame).
+#' @param lmdb The dispensing register (lazy table or data frame). Also works
+#'   on an LPR table if you pass diagnosis code columns via `cols`.
 #' @param cols Columns to inspect. Defaults to the full ATC column and the short
 #'   level column.
-#' @param n_sample Rows to pull for the check.
+#' @param n_sample Rows to pull for the check (sample, not census).
 #' @return A data frame of column, code length and frequency, invisibly. Also
 #'   printed, with example values.
 #' @export
-mb_inspect_codes <- function(lmdb,
-                             cols = c("atc", "atc2"),
-                             n_sample = MB_INSPECT_SAMPLE_ROWS) {
+mb_inspect_code_lengths <- function(lmdb,
+                                    cols = c("atc", "atc2"),
+                                    n_sample = MB_INSPECT_SAMPLE_ROWS) {
 
   cols <- cols[vapply(cols, function(cc) mb_has_col(lmdb, cc), logical(1))]
   if (!length(cols)) {
@@ -102,20 +110,29 @@ mb_inspect_codes <- function(lmdb,
 }
 # 3. Code list against the register ----
 
-#' Check a code list against the codes actually present in the register
+#' Count register matches for each code in your code list
 #'
-#' Finds codes that match nothing at all: a typo, a code retired before the
-#' study period, a drug never marketed in Denmark, or a whole ATC chapter
-#' missing from the extract. The Stata original notes that chapters S and V were
-#' absent from its data, which is why glaucoma came back empty there - a fact
-#' invisible from the result alone.
+#' **What:** for each code in your code list, count how many register rows match
+#' (prefix match, the same way the extractors match).
 #'
-#' @param lmdb The dispensing register.
+#' **When:** optional preflight before a long DST extract - catch typos / dead
+#' codes that would otherwise give silent zeros (a typo, a code retired before
+#' the study period, a drug never marketed in Denmark, or a whole ATC chapter
+#' missing from the extract).
+#'
+#' **Input:** register + code list. **Output:** one row per list code with the
+#' match count (`n_dispensings` / `found`).
+#'
+#' Not the same as [mb_inspect_code_lengths()], which reports string lengths of
+#' code *columns in the register*, not whether list codes hit anything.
+#'
+#' @param lmdb The dispensing register (or LPR if `code_col` is a diagnosis
+#'   column).
 #' @param codes A code list.
-#' @param code_col Full ATC column name.
+#' @param code_col Full code column name in the register (default `"atc"`).
 #' @param conditions Conditions to check. `NULL` = all.
-#' @return A data frame with one row per code and the number of dispensings it
-#'   matches.
+#' @return A data frame with one row per list code and the number of register
+#'   rows it matches.
 #' @export
 mb_check_codes <- function(lmdb, codes = mb_codelist(), code_col = "atc",
                            conditions = NULL) {

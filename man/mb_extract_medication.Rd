@@ -45,7 +45,7 @@ results as a named list instead of writing anything.}
 or \code{NULL} to filter on \code{code_col} directly.}
 
 \item{prefilter_len}{Characters held by \code{prefilter_col}. Check with
-\code{\link[=mb_inspect_codes]{mb_inspect_codes()}} before trusting it.}
+\code{\link[=mb_inspect_code_lengths]{mb_inspect_code_lengths()}} before trusting it.}
 
 \item{from}{Inclusive lower date bound on \code{date_col} (\strong{required} \code{Date};
 error if \code{NULL}). Applied early, before the code filter and the
