@@ -120,6 +120,13 @@ The usual study run is: load lists -> extract diagnoses -> extract medications
 (prefer batch) -> merge -> reshape -> count. How many *conditions* you get
 depends on your CSV code lists, not on the package API.
 
+**What the onset date is (qualifying event).** Diagnosis: date of the **first**
+matching LPR diagnosis. Medication: date of the dispensing that meets the
+rule in the code list (`min_prescriptions` within `window_days`). For most
+bundled ATC conditions that is the **2nd** dispensing within 365 days. For
+**pain** it is the **4th** dispensing within 365 days. Same-day dispensings
+are de-duplicated by default before counting.
+
 Dates such as `1995-01-01`, `1997-01-01`, `2015-01-01`, and `2018-12-31` in
 the examples below are **placeholders**. Replace them with your study window.
 
@@ -152,7 +159,7 @@ codes <- mb_codelist()
 
 # ---------------------------------------------------------------------------
 # 2. Extract diagnoses from LPR
-#    One matching diagnosis = the condition. Writes one onset .rds per
+#    Onset = date of the first matching diagnosis. One onset .rds per
 #    condition into outdir (here: data/dx/).
 #    Tip: use a fresh outdir, or clear old .rds first. Resume skips files that
 #    already exist, so a dirty folder of leftover results can silently leave
@@ -168,7 +175,9 @@ mb_extract_diagnosis(
 
 # ---------------------------------------------------------------------------
 # 3. Extract medications from LMDB - prefer batch
-#    One SQL pass, low RAM, one onset .rds per ATC condition into data/rx/.
+#    Onset = date of the qualifying dispensing (usually the 2nd within 365
+#    days; pain = 4th within 365 days - see code list). One SQL pass, low
+#    RAM, one onset .rds per ATC condition into data/rx/.
 #    `from` is required (1997 recommended on DST - mother-CPR; see above).
 #    `to` is optional - omit for no upper date bound.
 # ---------------------------------------------------------------------------
