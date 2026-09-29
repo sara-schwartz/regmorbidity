@@ -203,8 +203,6 @@ Danish register ICD codes often carry a leading **D** (`DI10` in the register
 vs `I10` in published lists). The package normalises both forms before
 matching.
 
-If you provide your own CSV code lists, see `vignette("regmorbidity")`.
-
 ## Batch vs sequential medication methods
 
 Two medication extractors exist on purpose. Prefer **batch** for onset
@@ -219,15 +217,14 @@ checkpoints.
 | Raw events | No | Yes, with `keep_events = TRUE` |
 | Checkpoints | Per rule-batch (coarser) | Per condition (finer resume) |
 
-**Why both exist.** Onset studies usually only need the date a condition was
-first met. Batch asks DuckDB for that onset in one pass and never materialises
-matching dispensings in R - that is the efficient default. Prevalence
-("evidence within the last N days") and some debugging need the raw matching
-dispensings; those come from sequential extract with `keep_events = TRUE`,
-which writes `<condition>_all_events.rds` beside the onset file. Batch has no
-equivalent side file, so prevalence cannot be fed from a batch-only outdir.
-Both still write the same onset `.rds` shape, so merge / load / wide / count
-stay unchanged either way.
+**Why both exist.** Batch does the filtering and onset logic in the lazy
+DuckDB connection *before* `collect()`, so only a small result enters R. That
+is fast and keeps RAM low (on DST, a heavy collect can force the session to
+close). Sequential runs **one condition at a time** when you need more than
+onset - for example every matching dispensing with `keep_events = TRUE` for
+prevalence. Expect more time (and more RAM) if you extract all dispensings
+rather than onset only. Both write the same onset `.rds` shape, so merge /
+wide / count stay the same either way.
 
 ## Core workflow functions
 
@@ -257,8 +254,9 @@ live in `vignette("regmorbidity")`.
 ## More detail
 
 `vignette("regmorbidity")` - deepening only (assumes you read this README
-first): worked miniature, batch vs sequential + `keep_events`, medication
-rules, prevalence, merge logic, exclusions, and code-list QA helpers.
+first). Use it for own CSV code lists, sequential extract, `keep_events`,
+prevalence lookback, exclusion timing, helpers that test or compare code
+lists, medication rules, merge logic, and a worked miniature.
 
 `?regmorbidity` - package help for every exported function.
 
