@@ -226,7 +226,7 @@ prevalence. Expect more time (and more RAM) if you extract all dispensings
 rather than onset only. Both write the same onset `.rds` shape, so merge /
 wide / count stay the same either way.
 
-## Other core functions (not in the example above)
+## Additional functions
 
 - **`mb_extract_medication`** - sequential backup; use when you need
   `keep_events = TRUE` (prevalence / debug) or per-condition disk checkpoints
