@@ -27,9 +27,12 @@ and short one-liners for every function; this vignette owns the worked examples 
 decisions the README only points at (batch vs sequential, `keep_events`,
 prevalence lookback, inspect lengths, exclusion timing).
 
-**Use `mb_codelist` when** you need to load or filter lists before extract or
-QA (`conditions=`, `vocab=`). Bundled lists are **ATC + first-pass ICD**
-(distress archived out of the default set).
+**Use `mb_codelist` when** you need the code definitions before extract or QA.
+With no arguments it loads the **bundled CSVs already in the package**
+(ATC + first-pass ICD; distress archived out of the default set). You are not
+creating those files in the call — `vocab=` / `conditions=` only *filter* what
+was loaded. Pass a folder path, a CSV path, or a data frame only when you use
+your own lists instead of the bundled ones.
 
 ## What you supply
 
@@ -39,9 +42,10 @@ QA (`conditions=`, `vocab=`). Bundled lists are **ATC + first-pass ICD**
 2. **LMDB**: person id, **full** ATC, dispensing date (defaults: `pnr`,
    `atc`, `eksd`). An optional short ATC column (e.g. `atc2`) is used only by
    the sequential medication extractor as a pushed-down prefilter.
-3. **A code list** via `mb_codelist()` — filter with `conditions=` and/or
-   `vocab=` (e.g. `vocab = "ICD10"` for diagnosis, `vocab = "ATC"` for
-   medication).
+3. **Code lists** — shipped as CSVs inside the package. Call
+   `mb_codelist()` to load them; use `vocab = "ATC"` or `vocab = "ICD10"`
+   (and optional `conditions=`) to filter. Or pass your own folder / CSV /
+   data frame to `mb_codelist()`.
 
 Date windows use inclusive `from` / `to`. On LMDB medication extractors,
 `from` is **required** (error if omitted/`NULL`); `to` is optional. Prefer

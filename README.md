@@ -89,26 +89,69 @@ exposes a fixed set of **functions** (listed in the next section).
 ```r
 library(regmorbidity)
 
-# 1. Load lists
+# ---------------------------------------------------------------------------
+# 0. Registers (you supply these)
+#    On DST: open parquet via DuckDB as in the section above → objects `lpr`
+#    and `lmdb`. Below we assume those already exist.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# 1. Load code lists
+#    The package already ships CSV code lists (one file per condition under
+#    inst/extdata/codelists/). You do NOT pass file paths here unless you have
+#    your own edited copies.
+#
+#    mb_codelist() with no arguments = load ALL bundled rows (ATC + ICD).
+#    vocab = "ATC" / "ICD10" = keep only that vocabulary after load (a filter).
+#    conditions = "..." = keep only named condition(s) (also a filter).
+#
+#    Medication extractors need ATC rows; diagnosis extractors need ICD rows.
+#    So we load twice with different filters — still the same bundled CSVs.
+# ---------------------------------------------------------------------------
 rx_codes <- mb_codelist(vocab = "ATC")
+# Example: only hypertension ICD rows for a small diagnosis demo.
+# For a full study, drop `conditions=` to keep every bundled ICD condition:
+#   dx_codes <- mb_codelist(vocab = "ICD10")
 dx_codes <- mb_codelist(conditions = "hypertension", vocab = "ICD10")
 
-# 2. Extract diagnoses (LPR)
+# Own lists instead of bundled? Point at a folder of CSVs or one big CSV:
+#   codes <- mb_codelist("path/to/my_codelists/")
+
+# ---------------------------------------------------------------------------
+# 2. Extract diagnoses from LPR
+#    Writes one onset .rds per condition into outdir (here: data/dx/).
+# ---------------------------------------------------------------------------
 mb_extract_diagnosis(
-  lpr, codes = dx_codes, outdir = "data/dx",
-  from = as.Date("1995-01-01")
+  lpr,
+  codes  = dx_codes,
+  outdir = "data/dx",
+  from   = as.Date("1995-01-01")   # inclusive start; set to your study
 )
 
-# 3. Extract medications — prefer batch
+# ---------------------------------------------------------------------------
+# 3. Extract medications from LMDB — prefer batch
+#    Same idea: one onset .rds per ATC condition into data/rx/.
+#    `from` is required on medication extractors (1997 recommended on DST).
+# ---------------------------------------------------------------------------
 mb_extract_medication_batch(
-  lmdb, codes = rx_codes, outdir = "data/rx",
-  from = as.Date("1997-01-01")
+  lmdb,
+  codes  = rx_codes,
+  outdir = "data/rx",
+  from   = as.Date("1997-01-01")
 )
 
-# 4. Combine dx + rx extract directories → long
+# ---------------------------------------------------------------------------
+# 4. Merge diagnosis + medication halves
+#    Reads the two outdirs and returns one long data frame in memory
+#    (person × condition × onset). No new files.
+# ---------------------------------------------------------------------------
 long <- mb_merge_all("data/dx", "data/rx")
 
-# 5. Analyse
+# ---------------------------------------------------------------------------
+# 5. Reshape and count
+#    Wide = one column per condition (onset dates).
+#    Count = how many conditions each person has as of a date (ever after onset).
+# ---------------------------------------------------------------------------
 wide <- mb_to_wide(long)
 mb_count_conditions(wide, as_of = "2015-01-01")
 ```
@@ -122,8 +165,9 @@ Listed in the order most people meet them. One sentence each — **when to use**
 
 ### Load list
 
-- **`mb_codelist`** — load and filter code lists (`conditions=`, `vocab=`);
-  start here before any extract or QA.
+- **`mb_codelist`** — load the bundled CSVs (or your own folder/CSV/data frame),
+  then optionally filter with `conditions=` / `vocab=`; start here before any
+  extract or QA. Does not invent lists — it reads them.
 
 ### Preflight QA
 
