@@ -203,13 +203,8 @@ Danish register ICD codes often carry a leading **D** (`DI10` in the register
 vs `I10` in published lists). The package normalises both forms before
 matching.
 
-If column names differ from the defaults, pass `id_col`, `code_col`, and
-`date_col` on the extract call. Codes that never match the register produce
-empty extracts and silent zeros in downstream counts - see
-`mb_check_codes` in the vignette before a long DST run.
-
-For sequential extract, `keep_events`, prevalence lookback, exclusion timing,
-helpers that test or compare code lists, and a worked miniature:
+If you provide your own CSV code lists (or need column-name overrides,
+preflight checks, sequential extract, prevalence, or exclusions), see
 `vignette("regmorbidity")`.
 
 ## Batch vs sequential medication methods
