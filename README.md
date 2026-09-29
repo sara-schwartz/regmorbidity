@@ -111,14 +111,15 @@ lmdb <- tbl(con, "lmdb")
 
 Do **not** feed medication extractors with `duckplyr::read_parquet_duckdb()` or
 `fastreg::read_register()`. `fastreg` is still useful for SAS->parquet setup on
-DST: [fastreg](https://dp-next.github.io/fastreg/). Tiny in-memory frames work
-for toy runs (see the vignette).
+DST: [fastreg](https://dp-next.github.io/fastreg/).
 
 ## Recommended workflow
 
 The usual study run is: load lists -> extract diagnoses -> extract medications
-(prefer batch) -> merge -> reshape -> count. How many *conditions* you get
-depends on your CSV code lists, not on the package API.
+(prefer batch) -> merge -> reshape -> count. Lookback prevalence is optional
+and separate from that run: it needs raw events from the sequential
+extractor, not the batch onset files. How many *conditions* you get depends
+on your CSV code lists, not on the package API.
 
 **What the onset date is (qualifying event).** Diagnosis: date of the **first**
 matching LPR diagnosis. Medication: date of the dispensing that meets the
@@ -208,6 +209,56 @@ wide <- mb_to_wide(long)
 mb_count_conditions(wide, as_of = "2015-01-01")  # REPLACE with your as-of date
 ```
 
+**What the count is.** `mb_count_conditions(as_of = )` is ever-after onset:
+once the rule is met, the condition counts at every later date. There is no
+recovery. Prior's algorithm uses time-varying spells with recovery windows
+(two years for most diagnoses, five for cancer, one year for medication). A
+count from this package is a different estimand. At a given date it is higher
+than a spell-based figure, and the gap grows with follow-up. State that
+wherever you report the number.
+
+**Lookback prevalence (optional).** `mb_prevalence()` asks whether a
+qualifying record falls in `[as_of - lookback, as_of]`, using the same
+`min_prescriptions` / `window_days` rule as extraction. This is point-in-time
+prevalence. It is still not Prior's spells. `lookback = Inf` reproduces
+`mb_count_conditions(as_of = )`.
+
+It cannot run on the onset files from step 3. Batch writes onset only. Pass
+the raw matching records from a **sequential** extract with
+`keep_events = TRUE` (one `<condition>_all_events.rds` per condition). Pass
+`min_prescriptions` and `window_days` from that condition's code-list row, or
+the prevalence rule drifts away from extraction. For diagnosis events from
+`mb_extract_diagnosis(keep_events = TRUE)`, use `min_prescriptions = 1`.
+One call per condition. There is no lookback
+column on the code list: you choose it. One year is 365 days, two years 730,
+five years 1825, and `Inf` is ever-after. People with no qualifying record in
+the window are absent. `onset_date` in this result is the qualifying date
+inside the window, which can be later than the person's first-ever onset.
+
+```r
+# Separate from steps 2-3. Use a fresh outdir: the batch folder has no
+# raw-event files. `from` is required on LMDB (1997 recommended; see above).
+mb_extract_medication(
+  lmdb,
+  codes       = codes,
+  outdir      = "data/rx_events",
+  from        = as.Date("1997-01-01"),
+  to          = as.Date("2018-12-31"),
+  keep_events = TRUE
+)
+
+# Hypertension in the bundled list is 2 dispensings within 365 days.
+# Replace both numbers if you prevalence a different condition.
+disp <- readRDS("data/rx_events/hypertension_all_events.rds")
+mb_prevalence(
+  disp,
+  as_of             = "2015-01-01",  # REPLACE with your index date
+  lookback          = 365,           # days; Inf = ever after onset
+  min_prescriptions = 2,
+  window_days       = 365
+)
+```
+
 Danish register ICD codes often carry a leading **D** (`DI10` in the register
 vs `I10` in published lists). The package normalises both forms before
 matching.
@@ -246,9 +297,10 @@ wide / count stay the same either way.
 ## More detail
 
 `vignette("regmorbidity")` - deepening only (assumes you read this README
-first). Use it for own CSV code lists, sequential extract, `keep_events`,
-prevalence lookback, exclusion timing, helpers that test or compare code
-lists, medication rules, merge logic, and a worked miniature.
+first). Use it for directory-form extract, cohort `ids`, sequential extract
+and `keep_events`, prevalence lookback, exclusion timing, code-list QA,
+medication rules, and merge logic (OR / AND). Register chunks there are not
+executed; they assume your DST connections and `mb_codelist()`.
 
 `?regmorbidity` - package help for every exported function.
 
