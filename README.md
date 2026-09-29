@@ -181,20 +181,7 @@ mb_extract_medication_batch(
 )
 
 # ---------------------------------------------------------------------------
-# 4. Merge diagnosis + medication halves
-#    Reads the two outdirs and returns one long data frame in memory:
-#    one row per person x condition with an onset_date. No new files.
-#
-#    Example shape of `long` (illustrative):
-#
-#    | pnr | condition     | onset_date |
-#    |-----|---------------|------------|
-#    | 1   | hypertension  | 2008-01-01 |
-#    | 1   | diabetes      | 2010-03-15 |
-#    | 2   | hypertension  | 2009-06-01 |
-#
-#    This table is what "which conditions" looks like. The count step below
-#    does not re-list them; it only adds how many each person has.
+# 4. Merge diagnosis + medication halves (one long data frame)
 # ---------------------------------------------------------------------------
 long <- mb_merge_all("data/dx", "data/rx")
 
