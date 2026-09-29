@@ -38,16 +38,40 @@ library(regmorbidity)
 On Statistics Denmark (DST), registers should be **parquet**, opened through
 raw DuckDB + DBI + `dbplyr` — not loaded as SAS into R's memory. Medication
 batch needs a `dbplyr` `tbl_lazy` from a plain
-`DBI::dbConnect(duckdb::duckdb())` connection:
+`DBI::dbConnect(duckdb::duckdb())` connection.
+
+Replace the folder path below with **your** LMDB parquet folder on the project
+drive (ask a colleague if unsure). The `**` is a DuckDB glob, not something you
+fill in by hand: it means “this folder and every subfolder”. `*.parquet` means
+“every file ending in `.parquet`”. Together, `'…/lmdb/**/*.parquet'` reads all
+parquet files under that LMDB folder (typical when years are split into
+subfolders). If everything sits in one flat folder with no subfolders, you can
+use `'…/lmdb/*.parquet'` instead.
 
 ```r
-library(DBI); library(duckdb); library(dplyr)
+library(DBI)
+library(duckdb)
+library(dplyr)
 
+# 1. Open an empty DuckDB database in memory
 con <- dbConnect(duckdb())
-dbExecute(con, "CREATE VIEW lmdb AS SELECT * FROM read_parquet('path/to/lmdb/**/*.parquet')")
+
+# 2. Point DuckDB at your LMDB parquet files (edit THIS path only)
+dbExecute(
+  con,
+  "CREATE VIEW lmdb AS
+   SELECT * FROM read_parquet('E:/workdata/YOUR_PROJECT/cleaned-data/parquet-registers/lmdb/**/*.parquet')"
+)
+
+# 3. Get a lazy dplyr table — nothing is loaded into R yet
 lmdb <- tbl(con, "lmdb")
-# same pattern for LPR → tbl(con, "lpr")
-# dbDisconnect(con, shutdown = TRUE) when done
+
+# Same three steps for LPR, with a different path and view name, e.g.:
+# dbExecute(con, "CREATE VIEW lpr AS SELECT * FROM read_parquet('…/lpr/**/*.parquet')")
+# lpr <- tbl(con, "lpr")
+
+# When finished:
+# dbDisconnect(con, shutdown = TRUE)
 ```
 
 Do **not** feed medication extractors with `duckplyr::read_parquet_duckdb()` or
