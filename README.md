@@ -125,19 +125,22 @@ mb_extract_diagnosis(
   lpr,
   codes  = dx_codes,
   outdir = "data/dx",
-  from   = as.Date("1995-01-01")   # inclusive start; set to your study
+  from   = as.Date("1995-01-01"),  # inclusive start; set to your study
+  to     = as.Date("2018-12-31")   # optional inclusive end; not required - omit to leave open-ended
 )
 
 # ---------------------------------------------------------------------------
 # 3. Extract medications from LMDB - prefer batch
 #    Same idea: one onset .rds per ATC condition into data/rx/.
 #    `from` is required on medication extractors (1997 recommended on DST).
+#    `to` is optional (not required) - omit for no upper date bound.
 # ---------------------------------------------------------------------------
 mb_extract_medication_batch(
   lmdb,
   codes  = rx_codes,
   outdir = "data/rx",
-  from   = as.Date("1997-01-01")
+  from   = as.Date("1997-01-01"),  # required on LMDB
+  to     = as.Date("2018-12-31")   # optional; not required
 )
 
 # ---------------------------------------------------------------------------

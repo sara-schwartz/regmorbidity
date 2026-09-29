@@ -138,9 +138,12 @@ counts as of a date (once met, always met).
 
 ```{r}
 dx <- mb_extract_diagnosis(lpr, codes = dx_codes, outdir = NULL,
+                           from = as.Date("1995-01-01"),  # inclusive start
+                           to   = as.Date("2018-12-31"),  # optional; not required
                            verbose = FALSE)
 rx <- mb_extract_medication_batch(lmdb, codes = rx_codes, outdir = NULL,
-                                  from = as.Date("1997-01-01"),
+                                  from = as.Date("1997-01-01"),  # required on LMDB
+                                  to   = as.Date("2018-12-31"),  # optional; not required
                                   verbose = FALSE)
 
 # OR = earlier of dx/rx; AND = both required, later date.
@@ -154,9 +157,11 @@ Directory form of the same pipeline (not evaluated here):
 
 ```{r, eval = FALSE}
 mb_extract_diagnosis(lpr, codes = dx_codes, outdir = "data/dx",
-                     from = as.Date("1995-01-01"))
+                     from = as.Date("1995-01-01"),
+                     to   = as.Date("2018-12-31"))  # optional; not required
 mb_extract_medication_batch(lmdb, codes = rx_codes, outdir = "data/rx",
-                            from = as.Date("1997-01-01"))
+                            from = as.Date("1997-01-01"),  # required on LMDB
+                            to   = as.Date("2018-12-31"))  # optional; not required
 long <- mb_merge_all("data/dx", "data/rx")
 wide <- mb_to_wide(long)
 mb_count_conditions(wide, as_of = "2015-01-01")
@@ -167,7 +172,8 @@ extract call (a join against the lazy connection, not a written-out id list):
 
 ```{r, eval = FALSE}
 mb_extract_medication_batch(lmdb, codes = rx_codes, outdir = "data/rx",
-                            from = as.Date("1997-01-01"),
+                            from = as.Date("1997-01-01"),  # required on LMDB
+                            to   = as.Date("2018-12-31"),  # optional; not required
                             ids = cohort$pnr)
 ```
 
@@ -209,7 +215,8 @@ apart.
 Three settings that change counts:
 
 - **`from` / `to`** - inclusive. On LMDB, `from` is required; prefer
-  `from = as.Date("1997-01-01")`.
+  `from = as.Date("1997-01-01")`. `to` is optional (not required); omit it
+  to leave the upper end open.
 - **`dedupe_same_day`** - default `TRUE`.
 - **`window_days` / `min_prescriptions`** - from the code list.
 
@@ -222,7 +229,8 @@ not onset-only `.rds`.
 ```{r}
 outdir <- tempfile()
 mb_extract_medication(lmdb, codes = rx_codes, outdir = outdir,
-                      from = as.Date("1997-01-01"),
+                      from = as.Date("1997-01-01"),  # required on LMDB
+                      to   = as.Date("2018-12-31"),  # optional; not required
                       keep_events = TRUE, verbose = FALSE)
 disp <- readRDS(file.path(outdir, "hypertension_all_events.rds"))
 
