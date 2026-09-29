@@ -11,58 +11,65 @@ rather than in code. The package reads those lists, extracts the conditions
 from a dispensing register and a hospital register, and combines the two
 halves.
 
-This is not an implementation of any published index. The bundled lists take
-their starting point in those of Prior et al. (2016) and are meant to be
-revised, not cited. Read \code{ASSUMPTIONS_AND_LIMITATIONS.txt} before reporting
-any number from it.
+This is not an implementation of any published index. The bundled lists
+(ATC + first-pass ICD; distress archived out of the default set) take their
+starting point in those of Prior et al. (2016) and are meant to be revised,
+not cited. Fifteen exported functions. Design notes
+(\code{ASSUMPTIONS_AND_LIMITATIONS.txt}, \code{DECISIONS.md}) live in the source
+working tree if present; otherwise use \code{vignette("regmorbidity")} and this
+help page.
 }
-\section{Code lists}{
+\section{Happy path (loud)}{
 
 \describe{
-\item{\code{\link[=mb_codelist]{mb_codelist()}}}{load from a folder of per-condition CSVs, one file,
-or a data frame (validates on load)}
+\item{\code{\link[=mb_codelist]{mb_codelist()}}}{load/filter lists (\verb{conditions=}, \verb{vocab=})}
+\item{\code{\link[=mb_extract_diagnosis]{mb_extract_diagnosis()}}}{LPR onset}
+\item{\code{\link[=mb_extract_medication_batch]{mb_extract_medication_batch()}}}{preferred medication onset (SQL,
+low RAM)}
+\item{\code{\link[=mb_merge_all]{mb_merge_all()}}}{combine dx+rx extract directories -> long}
+\item{\code{\link[=mb_to_wide]{mb_to_wide()}} / \code{\link[=mb_count_conditions]{mb_count_conditions()}}}{ever-after counts as of
+a date}
 }
 }
 
-\section{Checks to run first}{
-
-\describe{
-\item{\code{\link[=mb_inspect_codes]{mb_inspect_codes()}}}{how long are the code columns really - the
-check that catches a 4-character pattern aimed at a 3-character column}
-\item{\code{\link[=mb_check_codes]{mb_check_codes()}}}{do these codes match anything at all, which is
-how a true zero is told from a typo}
-\item{\code{\link[=mb_lookup]{mb_lookup()}}}{which conditions a register code would count as}
-\item{\code{\link[=mb_overlap]{mb_overlap()}}}{codes shared between conditions (QA before counting)}
-}
-}
-
-\section{Extraction}{
+\section{Backup / special}{
 
 \describe{
-\item{\code{\link[=mb_extract_medication_batch]{mb_extract_medication_batch()}}}{recommended ATC path: every
-condition sharing one prescription rule in one query, collecting only
-final onset rows}
-\item{\code{\link[=mb_extract_medication]{mb_extract_medication()}}}{sequential backup - one condition at a
-time, checkpointed per condition; use when you need
-\code{keep_events} or finer resume}
-\item{\code{\link[=mb_extract_diagnosis]{mb_extract_diagnosis()}}}{the ICD-10 half, same contract as the
-sequential medication extractor}
+\item{\code{\link[=mb_extract_medication]{mb_extract_medication()}}}{sequential; use when you need
+\code{keep_events=TRUE} or one-condition debug}
+\item{\code{\link[=mb_merge_conditions]{mb_merge_conditions()}}}{merge one condition's two data frames
+(in memory)}
+\item{\code{\link[=mb_load_conditions]{mb_load_conditions()}}}{load one extract outdir to long (skips
+\verb{*_all_events.rds}); medication-only studies}
+\item{\code{\link[=mb_prevalence]{mb_prevalence()}}}{lookback prevalence on \strong{raw events}, not
+onset \code{.rds}}
 }
 }
 
-\section{Downstream (one path)}{
+\section{QA (optional, before long DST runs)}{
 
 \describe{
-\item{\code{\link[=mb_merge_conditions]{mb_merge_conditions()}}}{combine the two halves of one condition
-(OR or AND)}
-\item{\code{\link[=mb_merge_all]{mb_merge_all()}}}{every condition, from the two output folders}
-\item{\code{\link[=mb_load_conditions]{mb_load_conditions()}}}{read the per-condition \code{.rds} files back}
-\item{\code{\link[=mb_to_wide]{mb_to_wide()}}}{one column per condition}
-\item{\code{\link[=mb_count_conditions]{mb_count_conditions()}}}{\code{n_conditions} and \code{multimorbid}}
-\item{\code{\link[=mb_prevalence]{mb_prevalence()}}}{condition status at a point in time, with a
-lookback window, rather than ever-after-onset}
-\item{\code{\link[=mb_apply_exclusions]{mb_apply_exclusions()}}}{optional stage-2 Prior exclusion rules on
-an assembled long or wide table (provisional; not baked into extract)}
+\item{\code{\link[=mb_check_codes]{mb_check_codes()}}}{does each list code match anything in the
+register?}
+\item{\code{\link[=mb_lookup]{mb_lookup()}}}{which conditions claim this code?}
+\item{\code{\link[=mb_overlap]{mb_overlap()}}}{codes shared between conditions}
+}
+}
+
+\section{Advanced / demoted}{
+
+\describe{
+\item{\code{\link[=mb_inspect_codes]{mb_inspect_codes()}}}{reports \strong{code column string lengths} in
+the register (e.g. is \code{atc2} 3 chars?). Only needed before sequential
+extract / prefilter debugging. Not list review.}
+}
+}
+
+\section{Provisional}{
+
+\describe{
+\item{\code{\link[=mb_apply_exclusions]{mb_apply_exclusions()}}}{optional stage-2; incomplete vs Prior;
+not happy path. HTN still has C03 / HF / CKD gaps.}
 }
 }
 

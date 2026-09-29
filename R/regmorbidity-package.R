@@ -22,51 +22,56 @@
 #' from a dispensing register and a hospital register, and combines the two
 #' halves.
 #'
-#' This is not an implementation of any published index. The bundled lists take
-#' their starting point in those of Prior et al. (2016) and are meant to be
-#' revised, not cited. Read `ASSUMPTIONS_AND_LIMITATIONS.txt` before reporting
-#' any number from it.
+#' This is not an implementation of any published index. The bundled lists
+#' (ATC + first-pass ICD; distress archived out of the default set) take their
+#' starting point in those of Prior et al. (2016) and are meant to be revised,
+#' not cited. Fifteen exported functions. Design notes
+#' (`ASSUMPTIONS_AND_LIMITATIONS.txt`, `DECISIONS.md`) live in the source
+#' working tree if present; otherwise use `vignette("regmorbidity")` and this
+#' help page.
 #'
-#' @section Code lists:
+#' @section Happy path (loud):
 #' \describe{
-#'   \item{[mb_codelist()]}{load from a folder of per-condition CSVs, one file,
-#'     or a data frame (validates on load)}
+#'   \item{[mb_codelist()]}{load/filter lists (`conditions=`, `vocab=`)}
+#'   \item{[mb_extract_diagnosis()]}{LPR onset}
+#'   \item{[mb_extract_medication_batch()]}{preferred medication onset (SQL,
+#'     low RAM)}
+#'   \item{[mb_merge_all()]}{combine dx+rx extract directories -> long}
+#'   \item{[mb_to_wide()] / [mb_count_conditions()]}{ever-after counts as of
+#'     a date}
 #' }
 #'
-#' @section Checks to run first:
+#' @section Backup / special:
 #' \describe{
-#'   \item{[mb_inspect_codes()]}{how long are the code columns really - the
-#'     check that catches a 4-character pattern aimed at a 3-character column}
-#'   \item{[mb_check_codes()]}{do these codes match anything at all, which is
-#'     how a true zero is told from a typo}
-#'   \item{[mb_lookup()]}{which conditions a register code would count as}
-#'   \item{[mb_overlap()]}{codes shared between conditions (QA before counting)}
+#'   \item{[mb_extract_medication()]}{sequential; use when you need
+#'     `keep_events=TRUE` or one-condition debug}
+#'   \item{[mb_merge_conditions()]}{merge one condition's two data frames
+#'     (in memory)}
+#'   \item{[mb_load_conditions()]}{load one extract outdir to long (skips
+#'     `*_all_events.rds`); medication-only studies}
+#'   \item{[mb_prevalence()]}{lookback prevalence on **raw events**, not
+#'     onset `.rds`}
 #' }
 #'
-#' @section Extraction:
+#' @section QA (optional, before long DST runs):
 #' \describe{
-#'   \item{[mb_extract_medication_batch()]}{recommended ATC path: every
-#'     condition sharing one prescription rule in one query, collecting only
-#'     final onset rows}
-#'   \item{[mb_extract_medication()]}{sequential backup - one condition at a
-#'     time, checkpointed per condition; use when you need
-#'     `keep_events` or finer resume}
-#'   \item{[mb_extract_diagnosis()]}{the ICD-10 half, same contract as the
-#'     sequential medication extractor}
+#'   \item{[mb_check_codes()]}{does each list code match anything in the
+#'     register?}
+#'   \item{[mb_lookup()]}{which conditions claim this code?}
+#'   \item{[mb_overlap()]}{codes shared between conditions}
 #' }
 #'
-#' @section Downstream (one path):
+#' @section Advanced / demoted:
 #' \describe{
-#'   \item{[mb_merge_conditions()]}{combine the two halves of one condition
-#'     (OR or AND)}
-#'   \item{[mb_merge_all()]}{every condition, from the two output folders}
-#'   \item{[mb_load_conditions()]}{read the per-condition `.rds` files back}
-#'   \item{[mb_to_wide()]}{one column per condition}
-#'   \item{[mb_count_conditions()]}{`n_conditions` and `multimorbid`}
-#'   \item{[mb_prevalence()]}{condition status at a point in time, with a
-#'     lookback window, rather than ever-after-onset}
-#'   \item{[mb_apply_exclusions()]}{optional stage-2 Prior exclusion rules on
-#'     an assembled long or wide table (provisional; not baked into extract)}
+#'   \item{[mb_inspect_codes()]}{reports **code column string lengths** in
+#'     the register (e.g. is `atc2` 3 chars?). Only needed before sequential
+#'     extract / prefilter debugging. Not list review.}
+#' }
+#'
+#' @section Provisional:
+#' \describe{
+#'   \item{[mb_apply_exclusions()]}{optional stage-2; incomplete vs Prior;
+#'     not happy path. HTN still has C03 / HF / CKD gaps.}
 #' }
 #'
 #' @section Authors:

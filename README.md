@@ -1,6 +1,6 @@
 # regmorbidity
 
-Condition indicators, with dates, from Danish register data - defined in
+Condition indicators, with dates, from Danish register data — defined in
 **editable CSV code lists** rather than in code. It computes no score and is
 not an implementation of the Danish Multimorbidity Index or of any other
 published index. The bundled lists take their starting point in Prior et al.
@@ -17,14 +17,15 @@ library(regmorbidity)
 
 ## What you supply
 
-1. **LPR** - **one** combined diagnosis table with person id, ICD code,
+1. **LPR** — **one** combined diagnosis table with person id, ICD code,
    contact date (defaults: `pnr`, `C_DIAG`, `D_INDDTO`). The package does
    not merge LPR2 / LPR3 / psychiatric tables for you.
-2. **LMDB** - person id, **full** ATC, dispensing date (defaults: `pnr`,
-   `atc`, `eksd`). Medication extractors **require** `from` (typically
+2. **LMDB** — person id, **full** ATC, dispensing date (defaults: `pnr`,
+   `atc`, `eksd`). Medication extractors **require** `from` (recommend
    `from = as.Date("1997-01-01")` unless you have handled the pre-1997
    mother-CPR issue another way).
-3. Code lists - `mb_codelist()` or your own CSVs.
+3. Code lists — `mb_codelist()` (bundled: **ATC + first-pass ICD**; distress
+   archived out of the default set) or your own CSVs.
 
 ## Real register data: parquet + DuckDB
 
@@ -64,10 +65,7 @@ specifically [Getting started](https://dp-next.github.io/fastreg/articles/fastre
 
 ## Quick start
 
-Extractors take the **full code list** and write one onset file per
-condition in one pass. Prefer that. Use a sequential, one-condition-at-a-
-time run only when the cohort or year range is so large that a full-list
-pass is awkward (see vignette).
+Fifteen exports. Prefer this path; see **Functions** below for the rest.
 
 ```r
 library(regmorbidity)
@@ -75,11 +73,9 @@ library(regmorbidity)
 # For real parquet-backed registers, define lpr/lmdb as shown above.
 # The vignette uses tiny in-memory toy tables instead.
 
-# Bundled lists are ATC + first-pass ICD (2026-09-28). distress archived out of default set.
-rx_codes <- mb_codelist()
+rx_codes <- mb_codelist(vocab = "ATC")
 dx_codes <- mb_codelist(conditions = "hypertension", vocab = "ICD10")
 
-# Diagnoses (one combined LPR table; ICD code list, not the ATC bundle)
 mb_extract_diagnosis(
   lpr,
   codes  = dx_codes,
@@ -87,7 +83,6 @@ mb_extract_diagnosis(
   from   = as.Date("1995-01-01")   # example window; set to your study
 )
 
-# Medications (batch: all ATC conditions in two queries)
 mb_extract_medication_batch(
   lmdb,
   codes  = rx_codes,
@@ -95,24 +90,51 @@ mb_extract_medication_batch(
   from   = as.Date("1997-01-01")
 )
 
-# Merge returns a long data frame (no outdir). Load is for extract outdirs.
 long <- mb_merge_all("data/dx", "data/rx")
-# long <- mb_load_conditions("data/rx")   # one extract dir, no merge
 wide <- mb_to_wide(long)
 mb_count_conditions(wide, as_of = "2015-01-01")
 ```
 
-One condition at a time (sequential medication extract): pass a code list
-filtered to that condition into `mb_extract_medication()`, or the same
-idea with `mb_extract_diagnosis()`. Details and when to prefer it:
+Sequential extract, `keep_events`, and prevalence:
 `vignette("regmorbidity")`.
+
+## Functions
+
+**Happy path (loud)**
+
+1. `mb_codelist` — load/filter lists (`conditions=`, `vocab=`)
+2. `mb_extract_diagnosis` — LPR onset
+3. `mb_extract_medication_batch` — preferred medication onset (SQL, low RAM)
+4. `mb_merge_all` — combine dx+rx extract directories → long
+5. `mb_to_wide` → `mb_count_conditions` — ever-after counts as of a date
+
+**Backup / special**
+
+- `mb_extract_medication` — sequential; use when you need `keep_events=TRUE` or one-condition debug
+- `mb_merge_conditions` — merge one condition’s two data frames (in memory)
+- `mb_load_conditions` — load one extract outdir to long (skips `*_all_events.rds`); medication-only studies
+- `mb_prevalence` — lookback prevalence on **raw events**, not onset `.rds`
+
+**QA (optional, before long DST runs)**
+
+- `mb_check_codes` — does each list code match anything in the register?
+- `mb_lookup` — which conditions claim this code?
+- `mb_overlap` — codes shared between conditions
+
+**Advanced / demoted**
+
+- `mb_inspect_codes` — reports **code column string lengths** in the register (e.g. is `atc2` 3 chars?). Only needed before sequential extract / prefilter debugging. Not list review.
+
+**Provisional**
+
+- `mb_apply_exclusions` — optional stage-2; incomplete vs Prior; not happy path. HTN still has C03 / HF / CKD gaps.
 
 ## More detail
 
-`vignette("regmorbidity")` - full walkthrough (sequential extract,
-`keep_events`, prevalence, checks).
+`vignette("regmorbidity")` — sequential extract, `keep_events`, prevalence, QA.
 
-`?regmorbidity` - all 16 exported functions.
+`?regmorbidity` — all 15 exported functions.
 
-`ASSUMPTIONS_AND_LIMITATIONS.txt` and `DECISIONS.md` in the source repo -
-read before reporting a number. Output is onset-only by default.
+Design notes (`ASSUMPTIONS_AND_LIMITATIONS.txt`, `DECISIONS.md`) live in the
+source working tree if present; otherwise use the vignette and `?regmorbidity`.
+Output is onset-only by default.
