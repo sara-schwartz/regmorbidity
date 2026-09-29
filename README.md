@@ -226,28 +226,11 @@ prevalence. Expect more time (and more RAM) if you extract all dispensings
 rather than onset only. Both write the same onset `.rds` shape, so merge /
 wide / count stay the same either way.
 
-## Core workflow functions
+## Other core functions (not in the example above)
 
-Only the functions you need for the recommended run. Helpers to test or
-compare code lists (`mb_check_codes`, `mb_lookup`, `mb_overlap`,
-`mb_inspect_code_lengths`), prevalence, exclusions, and sequential detail
-live in `vignette("regmorbidity")`.
-
-- **`mb_codelist`** - load the bundled CSVs (or your own folder / CSV /
-  data frame). Start here. Default `mb_codelist()` loads all 36 conditions.
-- **`mb_extract_diagnosis`** - LPR onset: one matching diagnosis is the
-  condition; write one onset `.rds` per condition.
-- **`mb_extract_medication_batch`** - **prefer** for medication onset (one
-  SQL pass, low RAM); does not keep raw events.
 - **`mb_extract_medication`** - sequential backup; use when you need
-  `keep_events = TRUE` (prevalence / debug) or per-condition disk checkpoints.
-- **`mb_merge_all`** - combine diagnosis + medication extract directories into
-  one long table (person x condition x onset).
-- **`mb_to_wide`** - long onset table -> one row per person, one onset-date
-  column per condition.
-- **`mb_count_conditions`** - returns the same wide table plus `n_conditions`
-  and `multimorbid` (`>= 2`) as of a date. Does not list which conditions;
-  those remain the onset-date columns from `mb_to_wide`.
+  `keep_events = TRUE` (prevalence / debug) or per-condition disk checkpoints
+  (see batch vs sequential above).
 - **`mb_load_conditions`** - load one extract outdir to long (skips
   `*_all_events.rds`); use for medication-only studies.
 
