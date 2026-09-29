@@ -21,8 +21,6 @@ any number from it.
 \describe{
 \item{\code{\link[=mb_codelist]{mb_codelist()}}}{load from a folder of per-condition CSVs, one file,
 or a data frame (validates on load)}
-\item{\code{\link[=mb_write_codelist]{mb_write_codelist()}}}{split a list into one CSV per condition, for
-review by someone who does not read R}
 }
 }
 

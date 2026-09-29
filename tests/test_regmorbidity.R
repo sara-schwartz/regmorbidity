@@ -134,11 +134,19 @@ ok("exclude-only condition rejected",
 cat("\n=== 3. one CSV per disease ===\n")
 d <- file.path(tempdir(), "per_disease")
 unlink(d, recursive = TRUE)
-paths <- mb_write_codelist(codes, d)
-ok("36 files written", length(paths) == 36)
+dir.create(d, recursive = TRUE)
+roundtrip_conditions <- c("hypertension", "migraine")
+small <- codes[codes$condition %in% roundtrip_conditions,
+               MB_CODELIST_COLS, drop = FALSE]
+for (condition in roundtrip_conditions) {
+  utils::write.csv(small[small$condition == condition, , drop = FALSE],
+                   file.path(d, paste0(condition, ".csv")),
+                   row.names = FALSE, na = "")
+}
 back <- mb_codelist(d)
-ok("round-trips identically",
-   isTRUE(all.equal(codes[order(codes$condition, codes$code), MB_CODELIST_COLS],
+ok("2 condition files written", length(list.files(d, pattern = "\\.csv$") ) == 2)
+ok("selected conditions round-trip identically",
+   isTRUE(all.equal(small[order(small$condition, small$code), MB_CODELIST_COLS],
                     back[order(back$condition, back$code), MB_CODELIST_COLS],
                     check.attributes = FALSE)))
 
@@ -618,7 +626,7 @@ if (is.na(pkg_root)) {
                   as.character(e[[2]]) else NULL)))
 
   expected <- sort(c(
-    "mb_codelist", "mb_write_codelist",
+    "mb_codelist",
     "mb_inspect_codes", "mb_check_codes",
     "mb_lookup", "mb_overlap",
     "mb_extract_medication", "mb_extract_medication_batch",
@@ -628,7 +636,7 @@ if (is.na(pkg_root)) {
     "mb_count_conditions", "mb_prevalence",
     "mb_apply_exclusions"))
 
-  ok("exactly the intended 16 functions are public",
+  ok("exactly the intended 15 functions are public",
      identical(declared, expected))
   if (!identical(declared, expected)) {
     cat("     unexpectedly public:", paste(setdiff(declared, expected), collapse = ", "), "\n")

@@ -31,8 +31,6 @@
 #' \describe{
 #'   \item{[mb_codelist()]}{load from a folder of per-condition CSVs, one file,
 #'     or a data frame (validates on load)}
-#'   \item{[mb_write_codelist()]}{split a list into one CSV per condition, for
-#'     review by someone who does not read R}
 #' }
 #'
 #' @section Checks to run first:

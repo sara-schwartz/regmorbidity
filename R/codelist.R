@@ -1,5 +1,5 @@
 # .............................................................................
-# codelist.R - reading, checking and writing condition code lists
+# codelist.R - reading and checking condition code lists
 #
 # PURPOSE
 #   A code list says which register codes define which condition, and under what
@@ -54,7 +54,6 @@
 #        4.3 One rule per condition
 #        4.4 Duplicates
 #        4.5 Redundancy (warning, not an error)
-#   5. Writing
 # .............................................................................
 # 1. Constants ----
 
@@ -420,43 +419,4 @@ mb_validate_codelist <- function(codes, quiet = FALSE) {
             paste(sort(unique(codes$vocab_id)), collapse = "/"), ".")
   }
   invisible(codes)
-}
-# 5. Writing ----
-
-#' Write a code list out as one .csv per condition
-#'
-#' The point is review: one small file per disease can be sent to one clinician,
-#' and a change to a definition shows up as a one-file diff rather than a moved
-#' row in a 40-condition spreadsheet. Read the folder back with
-#' `mb_codelist("<dir>")`.
-#'
-#' @param codes A code list.
-#' @param dir Directory to write into. Created if needed.
-#' @param overwrite Overwrite existing files of the same name.
-#' @return The file paths written, invisibly.
-#' @export
-mb_write_codelist <- function(codes, dir, overwrite = FALSE) {
-
-  codes <- mb_codelist(codes, validate = FALSE)
-  if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
-
-  conditions <- unique(codes$condition)
-  paths <- file.path(dir, paste0(conditions, ".csv"))
-
-  # Refusing by default matters here: these files are the ones a collaborator
-  # may have spent an afternoon editing, and overwriting them is unrecoverable.
-  already_there <- file.exists(paths)
-  if (any(already_there) && !overwrite) {
-    stop("These files already exist (use overwrite = TRUE): ",
-         paste(basename(paths[already_there]), collapse = ", "), call. = FALSE)
-  }
-
-  for (i in seq_along(conditions)) {
-    one_condition <- codes[codes$condition == conditions[i],
-                           MB_CODELIST_COLS, drop = FALSE]
-    utils::write.csv(one_condition, paths[i], row.names = FALSE, na = "")
-  }
-
-  message("Wrote ", length(paths), " condition file(s) to ", dir)
-  invisible(paths)
 }
