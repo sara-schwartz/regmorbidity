@@ -33,11 +33,12 @@ library(regmorbidity)
 3. **Code lists** — `mb_codelist()` (bundled: **ATC + first-pass ICD**;
    distress archived out of the default set) or your own CSVs.
 
-## Parquet + DuckDB
+## On DST: parquet + DuckDB
 
-For real register work, use **parquet** and open it through raw DuckDB + DBI +
-`dbplyr`; do not load a SAS register into R's memory. Medication batch needs a
-`dbplyr` `tbl_lazy` from a plain `DBI::dbConnect(duckdb::duckdb())` connection:
+On Statistics Denmark (DST), registers should be **parquet**, opened through
+raw DuckDB + DBI + `dbplyr` — not loaded as SAS into R's memory. Medication
+batch needs a `dbplyr` `tbl_lazy` from a plain
+`DBI::dbConnect(duckdb::duckdb())` connection:
 
 ```r
 library(DBI); library(duckdb); library(dplyr)
@@ -50,9 +51,9 @@ lmdb <- tbl(con, "lmdb")
 ```
 
 Do **not** feed medication extractors with `duckplyr::read_parquet_duckdb()` or
-`fastreg::read_register()`. `fastreg` is still useful for SAS→parquet setup:
-[fastreg](https://dp-next.github.io/fastreg/). Tiny in-memory frames work for
-toy runs (see the vignette).
+`fastreg::read_register()`. `fastreg` is still useful for SAS→parquet setup on
+DST: [fastreg](https://dp-next.github.io/fastreg/). Tiny in-memory frames work
+for toy runs (see the vignette).
 
 ## Happy path
 
