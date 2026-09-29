@@ -79,9 +79,11 @@ Do **not** feed medication extractors with `duckplyr::read_parquet_duckdb()` or
 DST: [fastreg](https://dp-next.github.io/fastreg/). Tiny in-memory frames work
 for toy runs (see the vignette).
 
-## Happy path
+## Recommended workflow
 
-Fifteen exports. Numbered steps below; full inventory in the next section.
+The usual study run is the five steps below (load lists → extract diagnoses →
+extract medications with batch → merge → count). All fifteen exported
+functions are listed in the next section.
 
 ```r
 library(regmorbidity)
@@ -115,7 +117,7 @@ and a worked miniature: `vignette("regmorbidity")`.
 
 ## All functions
 
-Pedagogical order. One sentence each — **when to use**.
+Listed in the order most people meet them. One sentence each — **when to use**.
 
 ### Load list
 
@@ -146,7 +148,7 @@ Pedagogical order. One sentence each — **when to use**.
 ### Combine
 
 - **`mb_merge_all`** — combine diagnosis + medication extract directories into
-  one long table (happy-path merge).
+  one long table (the usual dx+rx merge).
 - **`mb_merge_conditions`** — merge one condition’s two in-memory data frames
   (OR/AND / optional `logic` column).
 - **`mb_load_conditions`** — load one extract outdir to long (skips
@@ -164,8 +166,7 @@ Pedagogical order. One sentence each — **when to use**.
 ### Provisional
 
 - **`mb_apply_exclusions`** — optional stage-2 Prior-style exclusions;
-  incomplete vs Prior; not on the happy path (HTN still has C03 / HF / CKD
-  gaps).
+  incomplete vs Prior; skip until you need stage-2 exclusions (HTN still has C03 / HF / CKD gaps).
 
 ## More detail
 

@@ -30,7 +30,7 @@
 #' working tree if present; otherwise use `vignette("regmorbidity")` and this
 #' help page.
 #'
-#' @section Happy path (loud):
+#' @section Recommended workflow:
 #' \describe{
 #'   \item{[mb_codelist()]}{load/filter lists (`conditions=`, `vocab=`)}
 #'   \item{[mb_extract_diagnosis()]}{LPR onset}
@@ -72,7 +72,7 @@
 #' @section Provisional:
 #' \describe{
 #'   \item{[mb_apply_exclusions()]}{optional stage-2; incomplete vs Prior;
-#'     not happy path. HTN still has C03 / HF / CKD gaps.}
+#'     not part of the recommended workflow. HTN still has C03 / HF / CKD gaps.}
 #' }
 #'
 #' @section Authors:

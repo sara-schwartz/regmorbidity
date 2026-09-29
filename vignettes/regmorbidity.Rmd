@@ -23,7 +23,7 @@ code lists rather than hard-coded rules. It computes no score and is not an
 implementation of any published multimorbidity index.
 
 The public surface is **15 exported functions**. The README is the inventory
-and happy-path one-liners; this vignette owns the worked examples and the
+and short one-liners for every function; this vignette owns the worked examples and the
 decisions the README only points at (batch vs sequential, `keep_events`,
 prevalence lookback, inspect lengths, exclusion timing).
 
@@ -116,7 +116,7 @@ prefilter silently matches nothing.
 mb_inspect_code_lengths(lmdb, cols = c("atc", "atc2"))
 ```
 
-## Worked miniature (happy path in memory)
+## Worked miniature (in memory)
 
 **Use `mb_extract_diagnosis` when** you have LPR and want onset from one
 matching diagnosis.
@@ -245,7 +245,7 @@ Extraction does **not** apply Prior's cross-condition exclusions.
 
 **Use `mb_apply_exclusions` when** you already have a long or wide onset
 table and want an optional stage-2 pass — provisional; incomplete vs Prior;
-not on the happy path. Distress was dropped from the default lists.
+not part of the recommended five-step workflow. Distress was dropped from the default lists.
 Hypertension still has gaps around C03 / heart failure / CKD.
 
 Timing options (pass via `timing=`):

@@ -19,7 +19,7 @@ not cited. Fifteen exported functions. Design notes
 working tree if present; otherwise use \code{vignette("regmorbidity")} and this
 help page.
 }
-\section{Happy path (loud)}{
+\section{Recommended workflow}{
 
 \describe{
 \item{\code{\link[=mb_codelist]{mb_codelist()}}}{load/filter lists (\verb{conditions=}, \verb{vocab=})}
@@ -70,7 +70,7 @@ the code list.}
 
 \describe{
 \item{\code{\link[=mb_apply_exclusions]{mb_apply_exclusions()}}}{optional stage-2; incomplete vs Prior;
-not happy path. HTN still has C03 / HF / CKD gaps.}
+not part of the recommended workflow. HTN still has C03 / HF / CKD gaps.}
 }
 }
 
